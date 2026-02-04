@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to GreenTrace</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f4f7f6; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 40px 30px; text-align: center; }
+    .header h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; }
+    .header p { color: rgba(255,255,255,0.9); font-size: 16px; }
+    .logo { width: 80px; height: 80px; background: #ffffff; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
+    .logo svg { width: 50px; height: 50px; }
+    .content { padding: 40px 30px; }
+    .greeting { font-size: 18px; color: #1f2937; margin-bottom: 20px; }
+    .message { color: #4b5563; font-size: 15px; margin-bottom: 25px; }
+    .features { background: #f0fdf4; border-radius: 12px; padding: 25px; margin: 25px 0; }
+    .features h3 { color: #15803d; margin-bottom: 15px; font-size: 16px; }
+    .feature-item { display: flex; align-items: flex-start; margin-bottom: 12px; }
+    .feature-icon { width: 24px; height: 24px; background: #16a34a; border-radius: 50%; margin-right: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .feature-icon svg { width: 14px; height: 14px; }
+    .feature-text { color: #374151; font-size: 14px; }
+    .cta-button { display: inline-block; background: #16a34a; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .cta-button:hover { background: #15803d; }
+    .role-badge { display: inline-block; background: #dbeafe; color: #1d4ed8; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; margin-bottom: 20px; }
+    .divider { height: 1px; background: #e5e7eb; margin: 30px 0; }
+    .footer { background: #f9fafb; padding: 30px; text-align: center; }
+    .footer p { color: #6b7280; font-size: 13px; margin-bottom: 10px; }
+    .social-links { margin-top: 20px; }
+    .social-links a { display: inline-block; margin: 0 8px; color: #6b7280; text-decoration: none; }
+    .help-text { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 25px 0; border-radius: 0 8px 8px 0; }
+    .help-text p { color: #92400e; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="#16a34a">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+      </div>
+      <h1>Welcome to GreenTrace!</h1>
+      <p>Your journey to a better agricultural marketplace starts here</p>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <p class="greeting">Hello {{userName}},</p>
+      
+      <span class="role-badge">{{userRole}}</span>
+      
+      <p class="message">
+        Thank you for joining GreenTrace! Your account has been created successfully. 
+        We're excited to have you as part of our growing community connecting farmers, 
+        experts, and consumers across India.
+      </p>
+
+      <!-- Features based on role -->
+      <div class="features">
+        <h3>Here's what you can do:</h3>
+        
+        {{#ifEquals userRole "farmer"}}
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">List your products and reach thousands of buyers</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">Get real-time mandi prices for informed decisions</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">Ask experts for crop advisory and guidance</span>
+        </div>
+        {{/ifEquals}}
+        
+        {{#ifEquals userRole "expert"}}
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">Answer farmers' questions and share your expertise</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">Build your reputation and gain followers</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">Write articles and contribute to the knowledge hub</span>
+        </div>
+        {{/ifEquals}}
+        
+        {{#ifEquals userRole "consumer"}}
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">Buy fresh produce directly from verified farmers</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">Track your orders in real-time</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <span class="feature-text">Access organic and certified products</span>
+        </div>
+        {{/ifEquals}}
+      </div>
+
+      <div style="text-align: center;">
+        <a href="{{dashboardUrl}}" class="cta-button">Go to Dashboard →</a>
+      </div>
+
+      <div class="help-text">
+        <p><strong>Need help getting started?</strong> Visit our help center or contact our support team at {{supportEmail}}</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>© {{year}} GreenTrace. All rights reserved.</p>
+      <p>Connecting India's Agricultural Community</p>
+      <div class="social-links">
+        <a href="#">Facebook</a> |
+        <a href="#">Twitter</a> |
+        <a href="#">Instagram</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

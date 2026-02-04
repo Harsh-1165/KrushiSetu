@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Product Review</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f4f7f6; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 30px; text-align: center; }
+    .header h1 { color: #ffffff; font-size: 22px; }
+    .content { padding: 30px; }
+    .product-preview { display: flex; align-items: center; background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 25px; }
+    .product-image { width: 60px; height: 60px; background: #e5e7eb; border-radius: 8px; margin-right: 15px; }
+    .product-info h4 { color: #1f2937; font-size: 15px; }
+    .product-info p { color: #6b7280; font-size: 13px; }
+    .review-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 25px; }
+    .reviewer-info { display: flex; align-items: center; margin-bottom: 15px; }
+    .reviewer-avatar { width: 45px; height: 45px; background: #8b5cf6; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
+    .reviewer-name { color: #1f2937; font-size: 15px; font-weight: 500; }
+    .review-date { color: #6b7280; font-size: 13px; }
+    .stars { color: #f59e0b; font-size: 20px; letter-spacing: 2px; margin-bottom: 15px; }
+    .review-title { color: #1f2937; font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+    .review-content { color: #4b5563; font-size: 14px; }
+    .cta-button { display: block; background: #8b5cf6; color: #ffffff !important; text-decoration: none; padding: 14px; border-radius: 8px; font-weight: 600; text-align: center; margin-top: 25px; }
+    .footer { background: #f9fafb; padding: 25px; text-align: center; }
+    .footer p { color: #6b7280; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⭐ New Review on Your Product</h1>
+    </div>
+    
+    <div class="content">
+      <p style="margin-bottom: 20px;">Hi {{sellerName}},</p>
+      <p style="color: #4b5563; margin-bottom: 25px;">
+        Someone just left a review on one of your products!
+      </p>
+      
+      <div class="product-preview">
+        <div class="product-image"></div>
+        <div class="product-info">
+          <h4>{{productName}}</h4>
+          <p>Your Product</p>
+        </div>
+      </div>
+      
+      <div class="review-card">
+        <div class="reviewer-info">
+          <div class="reviewer-avatar">{{substring reviewerName 0 1}}</div>
+          <div>
+            <p class="reviewer-name">{{reviewerName}}</p>
+            <p class="review-date">Verified Purchase</p>
+          </div>
+        </div>
+        
+        <div class="stars">
+          {{#times rating}}★{{/times}}{{#times (subtract 5 rating)}}☆{{/times}}
+        </div>
+        
+        {{#if reviewTitle}}
+        <h4 class="review-title">"{{reviewTitle}}"</h4>
+        {{/if}}
+        
+        <p class="review-content">{{reviewContent}}</p>
+      </div>
+      
+      <a href="{{productUrl}}" class="cta-button">View All Reviews →</a>
+      
+      <p style="color: #6b7280; font-size: 13px; margin-top: 20px; text-align: center;">
+        Responding to reviews can help build trust with your customers!
+      </p>
+    </div>
+    
+    <div class="footer">
+      <p>Manage all your reviews from your <a href="{{dashboardUrl}}" style="color: #8b5cf6;">seller dashboard</a>.</p>
+      <p style="margin-top: 10px;">© {{year}} GreenTrace</p>
+    </div>
+  </div>
+</body>
+</html>

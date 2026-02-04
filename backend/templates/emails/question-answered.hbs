@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Question Was Answered</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f4f7f6; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); padding: 30px; text-align: center; }
+    .header h1 { color: #ffffff; font-size: 22px; }
+    .content { padding: 30px; }
+    .question-box { background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 20px; border-radius: 0 8px 8px 0; margin-bottom: 25px; }
+    .question-box h4 { color: #0369a1; font-size: 14px; margin-bottom: 8px; }
+    .question-box p { color: #1e40af; font-size: 15px; }
+    .expert-card { display: flex; align-items: center; background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .expert-avatar { width: 50px; height: 50px; background: #16a34a; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px; }
+    .expert-info h4 { color: #1f2937; font-size: 15px; }
+    .expert-info p { color: #6b7280; font-size: 13px; }
+    .expert-info .rating { color: #f59e0b; font-size: 13px; margin-top: 4px; }
+    .answer-preview { border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; }
+    .answer-preview h4 { color: #374151; font-size: 14px; margin-bottom: 10px; }
+    .answer-preview p { color: #4b5563; font-size: 14px; }
+    .cta-button { display: block; background: #0ea5e9; color: #ffffff !important; text-decoration: none; padding: 14px; border-radius: 8px; font-weight: 600; text-align: center; margin-top: 25px; }
+    .footer { background: #f9fafb; padding: 25px; text-align: center; }
+    .footer p { color: #6b7280; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Your Question Was Answered!</h1>
+    </div>
+    
+    <div class="content">
+      <p style="margin-bottom: 20px;">Hi {{userName}},</p>
+      <p style="color: #4b5563; margin-bottom: 25px;">Great news! An expert has answered your question on GreenTrace.</p>
+      
+      <div class="question-box">
+        <h4>Your Question</h4>
+        <p><strong>{{questionTitle}}</strong></p>
+        <p style="margin-top: 8px; font-size: 14px; color: #64748b;">{{questionExcerpt}}</p>
+      </div>
+      
+      <div class="expert-card">
+        <div class="expert-avatar">{{substring expertName 0 1}}</div>
+        <div class="expert-info">
+          <h4>{{expertName}}</h4>
+          <p>{{expertSpecialization}}</p>
+          <p class="rating">★ {{expertRating}} rating</p>
+        </div>
+      </div>
+      
+      <div class="answer-preview">
+        <h4>Answer Preview</h4>
+        <p>{{answerExcerpt}}</p>
+      </div>
+      
+      <a href="{{questionUrl}}" class="cta-button">View Full Answer →</a>
+      
+      <p style="color: #6b7280; font-size: 13px; margin-top: 20px; text-align: center;">
+        If this answer helped you, don't forget to mark it as accepted!
+      </p>
+    </div>
+    
+    <div class="footer">
+      <p>Need more help? Ask another question in our advisory section.</p>
+      <p style="margin-top: 10px;">© {{year}} GreenTrace</p>
+    </div>
+  </div>
+</body>
+</html>

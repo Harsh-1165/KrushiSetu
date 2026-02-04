@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Update</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f4f7f6; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+    .status-icon { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; }
+    .header h1 { font-size: 22px; color: #1f2937; }
+    .header p { color: #6b7280; font-size: 14px; margin-top: 5px; }
+    .content { padding: 30px; }
+    .status-message { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px 20px; margin-bottom: 25px; }
+    .status-message p { color: #166534; font-size: 15px; }
+    .timeline { position: relative; padding-left: 30px; }
+    .timeline::before { content: ''; position: absolute; left: 10px; top: 5px; bottom: 5px; width: 2px; background: #e5e7eb; }
+    .timeline-item { position: relative; margin-bottom: 20px; }
+    .timeline-item::before { content: ''; position: absolute; left: -24px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: #e5e7eb; }
+    .timeline-item.completed::before { background: #16a34a; }
+    .timeline-item.current::before { background: #16a34a; box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2); }
+    .timeline-item h4 { font-size: 14px; color: #1f2937; }
+    .timeline-item p { font-size: 13px; color: #6b7280; }
+    .tracking-box { background: #f3f4f6; padding: 20px; border-radius: 8px; margin-top: 25px; }
+    .tracking-box h4 { font-size: 14px; color: #1f2937; margin-bottom: 10px; }
+    .tracking-box p { font-size: 14px; color: #4b5563; }
+    .tracking-box a { color: #16a34a; text-decoration: none; font-weight: 500; }
+    .items-preview { margin-top: 25px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+    .items-preview h4 { font-size: 14px; color: #6b7280; margin-bottom: 10px; }
+    .cta-button { display: block; background: #16a34a; color: #ffffff !important; text-decoration: none; padding: 14px; border-radius: 8px; font-weight: 600; text-align: center; margin-top: 25px; }
+    .footer { background: #f9fafb; padding: 25px; text-align: center; }
+    .footer p { color: #6b7280; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="status-icon" style="background: {{statusColor currentStatus}}20;">
+        {{#ifEquals currentStatus "shipped"}}
+        <svg width="35" height="35" viewBox="0 0 24 24" fill="{{statusColor currentStatus}}">
+          <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+        </svg>
+        {{/ifEquals}}
+        {{#ifEquals currentStatus "delivered"}}
+        <svg width="35" height="35" viewBox="0 0 24 24" fill="{{statusColor currentStatus}}">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>
+        {{/ifEquals}}
+      </div>
+      <h1>Order #{{orderNumber}}</h1>
+      <p>Status: <strong style="color: {{statusColor currentStatus}};">{{currentStatus}}</strong></p>
+    </div>
+    
+    <div class="content">
+      <p style="margin-bottom: 20px;">Hi {{userName}},</p>
+      
+      <div class="status-message">
+        <p>{{statusMessage}}</p>
+      </div>
+      
+      {{#if trackingNumber}}
+      <div class="tracking-box">
+        <h4>Tracking Information</h4>
+        <p>Tracking Number: <strong>{{trackingNumber}}</strong></p>
+        {{#if trackingUrl}}
+        <p style="margin-top: 10px;"><a href="{{trackingUrl}}">Track with carrier →</a></p>
+        {{/if}}
+      </div>
+      {{/if}}
+      
+      <div class="items-preview">
+        <h4>Items in this order ({{itemCount}})</h4>
+        {{#each items}}
+        <p style="color: #374151; font-size: 14px; margin: 5px 0;">• {{this.name}} x {{this.quantity}}</p>
+        {{/each}}
+        {{#if (gt itemCount 3)}}
+        <p style="color: #6b7280; font-size: 13px; margin-top: 5px;">+ {{subtract itemCount 3}} more items</p>
+        {{/if}}
+      </div>
+      
+      <a href="{{orderUrl}}" class="cta-button">View Order Details →</a>
+    </div>
+    
+    <div class="footer">
+      <p>Questions about your order? Contact us at {{supportEmail}}</p>
+      <p style="margin-top: 10px;">© {{year}} GreenTrace</p>
+    </div>
+  </div>
+</body>
+</html>

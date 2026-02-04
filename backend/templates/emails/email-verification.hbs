@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f4f7f6; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 40px 30px; text-align: center; }
+    .header h1 { color: #ffffff; font-size: 24px; }
+    .content { padding: 40px 30px; text-align: center; }
+    .icon-circle { width: 80px; height: 80px; background: #dcfce7; border-radius: 50%; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; }
+    .icon-circle svg { width: 40px; height: 40px; }
+    .greeting { font-size: 18px; color: #1f2937; margin-bottom: 15px; }
+    .message { color: #4b5563; font-size: 15px; margin-bottom: 30px; }
+    .cta-button { display: inline-block; background: #16a34a; color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; }
+    .expires { color: #9ca3af; font-size: 13px; margin-top: 25px; }
+    .alt-link { background: #f3f4f6; padding: 20px; border-radius: 8px; margin-top: 30px; word-break: break-all; }
+    .alt-link p { color: #6b7280; font-size: 13px; margin-bottom: 10px; }
+    .alt-link code { color: #374151; font-size: 12px; }
+    .footer { background: #f9fafb; padding: 25px; text-align: center; }
+    .footer p { color: #6b7280; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Verify Your Email Address</h1>
+    </div>
+    
+    <div class="content">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="#16a34a">
+          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+        </svg>
+      </div>
+      
+      <p class="greeting">Hi {{userName}},</p>
+      
+      <p class="message">
+        Please verify your email address to complete your GreenTrace account setup 
+        and access all features.
+      </p>
+      
+      <a href="{{verificationUrl}}" class="cta-button">Verify Email Address</a>
+      
+      <p class="expires">This link expires in {{expiresIn}}</p>
+      
+      <div class="alt-link">
+        <p>If the button doesn't work, copy and paste this link:</p>
+        <code>{{verificationUrl}}</code>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>If you didn't create a GreenTrace account, please ignore this email.</p>
+      <p style="margin-top: 10px;">Need help? Contact {{supportEmail}}</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Product Available</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f4f7f6; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 30px; text-align: center; }
+    .header h1 { color: #ffffff; font-size: 22px; }
+    .content { padding: 30px; }
+    .product-card { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-bottom: 25px; }
+    .product-image { height: 200px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; }
+    .product-image img { max-width: 100%; max-height: 100%; object-fit: cover; }
+    .product-details { padding: 20px; }
+    .organic-badge { display: inline-block; background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; margin-bottom: 10px; }
+    .product-name { font-size: 20px; color: #1f2937; font-weight: 600; margin-bottom: 8px; }
+    .product-price { font-size: 24px; color: #16a34a; font-weight: 700; }
+    .product-price small { font-size: 14px; color: #6b7280; font-weight: 400; }
+    .product-description { color: #4b5563; font-size: 14px; margin-top: 15px; }
+    .farmer-info { display: flex; align-items: center; padding: 15px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb; }
+    .farmer-avatar { width: 40px; height: 40px; background: #16a34a; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
+    .farmer-details h4 { color: #1f2937; font-size: 14px; }
+    .farmer-details p { color: #6b7280; font-size: 13px; }
+    .cta-button { display: block; background: #16a34a; color: #ffffff !important; text-decoration: none; padding: 14px; border-radius: 8px; font-weight: 600; text-align: center; }
+    .secondary-link { display: block; text-align: center; margin-top: 15px; color: #6b7280; font-size: 14px; }
+    .secondary-link a { color: #16a34a; text-decoration: none; }
+    .footer { background: #f9fafb; padding: 25px; text-align: center; }
+    .footer p { color: #6b7280; font-size: 13px; }
+    .footer a { color: #16a34a; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>New Product from a Farmer You Follow!</h1>
+    </div>
+    
+    <div class="content">
+      <p style="margin-bottom: 20px;">Hi {{userName}},</p>
+      <p style="color: #4b5563; margin-bottom: 25px;">
+        <strong>{{farmerName}}</strong> just listed a new product that might interest you!
+      </p>
+      
+      <div class="product-card">
+        <div class="product-image">
+          {{#if productImage}}
+          <img src="{{productImage}}" alt="{{productName}}">
+          {{else}}
+          <svg width="60" height="60" viewBox="0 0 24 24" fill="#9ca3af">
+            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+          </svg>
+          {{/if}}
+        </div>
+        <div class="product-details">
+          {{#if isOrganic}}
+          <span class="organic-badge">🌿 Organic Certified</span>
+          {{/if}}
+          <h3 class="product-name">{{productName}}</h3>
+          <p class="product-price">₹{{productPrice}} <small>/{{productUnit}}</small></p>
+          <p class="product-description">{{productDescription}}</p>
+        </div>
+        <div class="farmer-info">
+          <div class="farmer-avatar">{{substring farmerName 0 1}}</div>
+          <div class="farmer-details">
+            <h4>{{farmerName}}</h4>
+            <p>★ {{farmerRating}} rating</p>
+          </div>
+        </div>
+      </div>
+      
+      <a href="{{productUrl}}" class="cta-button">View Product →</a>
+      
+      <p class="secondary-link">
+        <a href="{{farmerUrl}}">See all products from {{farmerName}}</a>
+      </p>
+    </div>
+    
+    <div class="footer">
+      <p>You're receiving this because you follow {{farmerName}}.</p>
+      <p style="margin-top: 10px;"><a href="{{unsubscribeUrl}}">Unsubscribe from this farmer's updates</a></p>
+      <p style="margin-top: 10px;">© {{year}} GreenTrace</p>
+    </div>
+  </div>
+</body>
+</html>
