@@ -161,8 +161,10 @@ const userSchema = new mongoose.Schema(
     },
     // Role-specific profiles
     farmerProfile: {
+      farmName: String,
       farmSize: Number,
       farmSizeUnit: { type: String, enum: ["acres", "hectares", "bigha"] },
+      experience: Number, // Years of farming experience
       crops: [String],
       farmingType: { type: String, enum: ["organic", "conventional", "mixed"] },
       certifications: [{ type: mongoose.Schema.Types.ObjectId, ref: "Certification" }],
@@ -177,7 +179,8 @@ const userSchema = new mongoose.Schema(
       },
     },
     expertProfile: {
-      specializations: [{ type: mongoose.Schema.Types.ObjectId, ref: "Specialization" }],
+      specializations: [String],
+      credentials: String, // Added field for simple text credentials
       qualifications: [
         {
           degree: String,

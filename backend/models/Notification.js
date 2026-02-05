@@ -31,6 +31,7 @@ const NotificationSchema = new Schema(
         "promotion",
         "verification",
         "message",
+        "new_question",
       ],
       required: true,
     },

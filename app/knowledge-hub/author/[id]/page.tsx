@@ -90,19 +90,16 @@ export default function AuthorProfilePage({
 
           <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
             <Avatar className="h-32 w-32 border-4 border-white/20">
-              <AvatarImage src={author.avatar || "/placeholder.svg"} alt={author.name} />
+              <AvatarImage src={author.avatar?.url || "/placeholder.svg"} alt={`${author.name.first} ${author.name.last}`} />
               <AvatarFallback className="text-4xl bg-green-700">
-                {author.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
+                {`${author.name.first[0]}${author.name.last[0]}`}
               </AvatarFallback>
             </Avatar>
 
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{author.name}</h1>
-                {author.isVerified && (
+                <h1 className="text-3xl font-bold">{`${author.name.first} ${author.name.last}`}</h1>
+                {author.expertProfile?.verified && (
                   <Badge className="bg-blue-500 text-white">
                     <Award className="h-3 w-3 mr-1" />
                     Verified Expert
@@ -110,21 +107,13 @@ export default function AuthorProfilePage({
                 )}
               </div>
 
-              <p className="text-lg text-green-100 mb-4">{author.title}</p>
+              <p className="text-lg text-green-100 mb-4">{author.role}</p>
 
               <div className="flex flex-wrap gap-4 text-sm text-green-100">
-                {author.location && (
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {author.location}
-                  </div>
-                )}
+                {/* Location might not be in author object yet, removed for now or check if exists */}
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  Joined {new Date(author.joinedDate).toLocaleDateString("en-IN", {
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  Request to fetch joinedDate or removing if not available in Author type
                 </div>
               </div>
             </div>
@@ -148,21 +137,21 @@ export default function AuthorProfilePage({
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x">
             <div className="py-6 px-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{author.articlesCount}</div>
+              <div className="text-2xl font-bold text-green-600">{author.articlesCount || 0}</div>
               <div className="text-sm text-muted-foreground">Articles</div>
             </div>
             <div className="py-6 px-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{author.totalViews?.toLocaleString() || "0"}</div>
+              <div className="text-2xl font-bold text-green-600">{(author as any).totalViews?.toLocaleString() || "0"}</div>
               <div className="text-sm text-muted-foreground">Total Views</div>
             </div>
             <div className="py-6 px-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{author.followers?.toLocaleString() || "0"}</div>
+              <div className="text-2xl font-bold text-green-600">{author.followersCount?.toLocaleString() || "0"}</div>
               <div className="text-sm text-muted-foreground">Followers</div>
             </div>
             <div className="py-6 px-4 text-center">
               <div className="flex items-center justify-center gap-1">
                 <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-                <span className="text-2xl font-bold">{author.rating?.toFixed(1) || "4.5"}</span>
+                <span className="text-2xl font-bold">{author.expertProfile?.rating?.toFixed(1) || "N/A"}</span>
               </div>
               <div className="text-sm text-muted-foreground">Rating</div>
             </div>
@@ -188,7 +177,7 @@ export default function AuthorProfilePage({
                 {articles.length > 0 ? (
                   <div className="grid gap-6">
                     {articles.map((article) => (
-                      <ArticleCard key={article.id} article={article} variant="horizontal" />
+                      <ArticleCard key={article._id} article={article} variant="horizontal" />
                     ))}
                   </div>
                 ) : (
@@ -208,7 +197,7 @@ export default function AuthorProfilePage({
                 <Card>
                   <CardContent className="pt-6">
                     <div className="prose prose-green max-w-none dark:prose-invert">
-                      <h3>About {author.name}</h3>
+                      <h3>About {`${author.name.first} ${author.name.last}`}</h3>
                       <p>{author.bio}</p>
 
                       {author.expertise && author.expertise.length > 0 && (
@@ -224,12 +213,12 @@ export default function AuthorProfilePage({
                         </>
                       )}
 
-                      {author.qualifications && author.qualifications.length > 0 && (
+                      {author.expertProfile?.qualifications && author.expertProfile.qualifications.length > 0 && (
                         <>
                           <h4>Qualifications</h4>
                           <ul>
-                            {author.qualifications.map((qual, index) => (
-                              <li key={index}>{qual}</li>
+                            {author.expertProfile.qualifications.map((qual, index) => (
+                              <li key={index}>{`${qual.degree} - ${qual.institution} (${qual.year})`}</li>
                             ))}
                           </ul>
                         </>
@@ -249,7 +238,7 @@ export default function AuthorProfilePage({
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {(author.expertise || ["Agriculture", "Crop Management", "Organic Farming"]).map((exp) => (
+                  {(author.expertProfile?.specializations || ["Agriculture", "Crop Management", "Organic Farming"]).map((exp) => (
                     <Badge key={exp} variant="outline">
                       {exp}
                     </Badge>

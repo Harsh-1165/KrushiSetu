@@ -44,23 +44,53 @@ import { cn } from "@/lib/utils"
 // } from "@/lib/auth"
 
 // Fallback mocks for UI development if imports fail - keeping imports at top but defining loose types locally to prevent break
-const indianStates = ["Maharashtra", "Punjab", "Haryana", "Uttar Pradesh", "Karnataka"]
-const cropTypes = ["Wheat", "Rice", "Sugarcane", "Cotton", "Maize"]
-const expertSpecializations = ["Soil Science", "Pest Management", "Organic Farming", "Irrigation"]
-const consumerInterests = ["Organic Fruits", "Vegetables", "Grains", "Dairy"]
+const indianStates = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
+  "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+  "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+]
+const cropTypes = [
+  "Rice", "Wheat", "Maize", "Pulses", "Sugarcane",
+  "Cotton", "Vegetables", "Fruits", "Spices", "Oilseeds",
+  "Tea", "Coffee", "Rubber", "Jute", "Tobacco"
+]
+const expertSpecializations = [
+  "Soil Science", "Plant Pathology", "Entomology", "Agronomy",
+  "Horticulture", "Agricultural Economics", "Organic Farming",
+  "Irrigation Management", "Post-Harvest Technology",
+  "Animal Husbandry", "Aquaculture", "Agricultural Engineering"
+]
+const consumerInterests = [
+  "Fresh Vegetables", "Organic Fruits", "Exotic Fruits", "Grains & Pulses",
+  "Spices & Condiments", "Dairy Products", "Organic Honey", "Herbs",
+  "Homemade Pickles", "Dry Fruits"
+]
 
 // Mock Check - replace with actual import if available
 const checkPasswordStrength = (pass: string) => {
-  if (!pass) return { strength: "weak", score: 0 }
-  if (pass.length > 8) return { strength: "strong", score: 4 }
-  if (pass.length > 5) return { strength: "good", score: 3 }
-  return { strength: "weak", score: 1 }
+  const requirements = [
+    { regex: /.{8,}/, label: "At least 8 characters" },
+    { regex: /[A-Z]/, label: "One uppercase letter" },
+    { regex: /[a-z]/, label: "One lowercase letter" },
+    { regex: /[0-9]/, label: "One number" },
+    { regex: /[^A-Za-z0-9]/, label: "One special character" },
+  ]
+
+  const passed = requirements.filter(req => req.regex.test(pass))
+  const score = passed.length
+
+  let strength = "weak"
+  if (score >= 5) strength = "strong"
+  else if (score >= 3) strength = "good"
+
+  return { strength, score, requirements: requirements.map(req => ({ label: req.label, met: req.regex.test(pass) })) }
 }
-// Mock Register - replace with actual
-import { registerUser } from "@/lib/auth" // Attempt to use real one, if fails, fallback logic in handleSubmit
+
+// ... imports ...
+import { registerUser } from "@/lib/auth"
 
 type UserRole = "farmer" | "expert" | "consumer"
-
 const roles = [
   {
     id: "farmer" as const,
@@ -96,7 +126,7 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState("")
-  const [agreedToTerms, setAgreedToTerms] = React.useState(false) // Keeping state but might not show checkbox explicitly if implied
+  const [agreedToTerms, setAgreedToTerms] = React.useState(false)
 
   const [formData, setFormData] = React.useState({
     firstName: "",
@@ -121,8 +151,7 @@ export default function SignupPage() {
     interests: [] as string[],
   })
 
-  // Safe check
-  const passwordStrength = checkPasswordStrength(formData.password)
+  const passwordValidation = checkPasswordStrength(formData.password)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -157,13 +186,27 @@ export default function SignupPage() {
       if (!formData.email.trim()) { setError("Email is required"); return false; }
       if (!formData.phone.trim()) { setError("Phone is required"); return false; }
       if (!formData.password) { setError("Password is required"); return false; }
+      if (passwordValidation.score < 5) { setError("Please meet all password requirements"); return false; }
       if (formData.password !== formData.confirmPassword) { setError("Passwords do not match"); return false; }
       return true
     }
 
-    // Simplified validation for demo/redesign speed - reuse comprehensive logic in real Prod
     if (step === 3) {
       if (!formData.state) { setError("State is required"); return false; }
+      if (!formData.district) { setError("District is required"); return false; }
+
+      if (selectedRole === "farmer") {
+        if (!formData.farmName) { setError("Farm Name is required"); return false; }
+        if (formData.crops.length === 0) { setError("Select at least one crop"); return false; }
+      }
+
+      if (selectedRole === "expert") {
+        if (formData.specializations.length === 0) { setError("Select at least one specialization"); return false; }
+      }
+
+      if (selectedRole === "consumer") {
+        // Interests optional? Let's make it optional or require 1
+      }
       return true
     }
 
@@ -190,7 +233,6 @@ export default function SignupPage() {
     setError("")
 
     try {
-      // Construct basic data payload matching the expected type roughly
       const registrationData: any = {
         email: formData.email,
         password: formData.password,
@@ -204,33 +246,44 @@ export default function SignupPage() {
         location: {
           state: formData.state,
           district: formData.district,
-          village: formData.village || undefined,
+          village: formData.village,
         },
       }
 
-      // In a real scenario we call existing registerUser
+      if (selectedRole === 'farmer') {
+        registrationData.farmerProfile = {
+          farmName: formData.farmName,
+          farmSize: Number(formData.farmSize),
+          experience: Number(formData.farmingExperience),
+          crops: formData.crops
+        }
+      } else if (selectedRole === 'expert') {
+        registrationData.expertProfile = {
+          experience: Number(formData.expertExperience),
+          credentials: formData.credentials,
+          specializations: formData.specializations
+        }
+      } else if (selectedRole === 'consumer') {
+        registrationData.consumerProfile = { // Note: Backend needs to handle this or ignore
+          interests: formData.interests
+        }
+      }
+
       const response = await registerUser(registrationData)
 
       if (response.success) {
         router.push("/verify-email?registered=true")
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      // Mock success for styling verification if backend fails in dev
-      // router.push("/login")
-      setError("Registration failed (Backend might be offline).")
+      setError(err.message || "Registration failed")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const getStrengthColor = () => {
-    switch (passwordStrength.strength) {
-      case "strong": return "bg-green-500"
-      case "good": return "bg-yellow-500"
-      case "fair": return "bg-orange-500"
-      default: return "bg-red-500"
-    }
+  const toggleAgreement = () => {
+    setAgreedToTerms(!agreedToTerms)
   }
 
   return (
@@ -306,38 +359,20 @@ export default function SignupPage() {
                     )}
                   >
                     <div className={`absolute inset-0 bg-gradient-to-r ${role.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-
                     <div className="relative flex items-center gap-4 z-10">
-                      <div
-                        className={cn(
-                          "h-12 w-12 rounded-lg flex items-center justify-center transition-colors",
-                          selectedRole === role.id
-                            ? "bg-green-500 text-black"
-                            : "bg-black/40 text-zinc-400 group-hover:text-white"
-                        )}
-                      >
+                      <div className={cn("h-12 w-12 rounded-lg flex items-center justify-center transition-colors", selectedRole === role.id ? "bg-green-500 text-black" : "bg-black/40 text-zinc-400 group-hover:text-white")}>
                         <role.icon className="h-6 w-6" />
                       </div>
                       <div>
                         <p className={cn("font-bold text-lg transition-colors text-white", selectedRole === role.id ? "text-green-400" : "")}>{role.title}</p>
-                        <p className="text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">
-                          {role.description}
-                        </p>
+                        <p className="text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">{role.description}</p>
                       </div>
                     </div>
                   </button>
                 ))}
               </div>
-
-              <Button
-                type="button"
-                className="w-full bg-green-500 hover:bg-green-400 text-black font-semibold h-11 rounded-xl mt-4"
-                size="lg"
-                onClick={handleNext}
-                disabled={!selectedRole}
-              >
-                Continue
-                <ChevronRight className="h-4 w-4 ml-2" />
+              <Button type="button" className="w-full bg-green-500 hover:bg-green-400 text-black font-semibold h-11 rounded-xl mt-4" size="lg" onClick={handleNext} disabled={!selectedRole}>
+                Continue <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             </motion.div>
           )}
@@ -399,30 +434,41 @@ export default function SignupPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {/* Strength Bar */}
-                {formData.password && (
-                  <div className="flex gap-1 h-1 mt-2">
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className={cn("flex-1 rounded-full transition-colors", i <= Math.ceil(passwordStrength.score / 1.5) ? getStrengthColor() : "bg-white/10")} />
-                    ))}
-                  </div>
-                )}
+
+                {/* Detailed Password Requirements */}
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {passwordValidation.requirements.map((req, i) => (
+                    <div key={i} className="flex items-center text-xs gap-1.5">
+                      <div className={cn("h-4 w-4 rounded-full flex items-center justify-center shrink-0", req.met ? "bg-green-500/20 text-green-500" : "bg-white/5 text-zinc-500")}>
+                        {req.met ? <CheckCircle2 className="h-2.5 w-2.5" /> : <div className="h-1.5 w-1.5 rounded-full bg-zinc-600" />}
+                      </div>
+                      <span className={cn(req.met ? "text-green-400" : "text-zinc-500")}>{req.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-zinc-400 ml-1">Confirm Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm password"
-                    className="pl-10 pr-10 bg-white/5 border-white/10 text-white focus:border-green-500/50 rounded-xl"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                  />
+                  <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} placeholder="Confirm password" className="pl-10 pr-10 bg-white/5 border-white/10 text-white focus:border-green-500/50 rounded-xl" value={formData.confirmPassword} onChange={handleInputChange} />
                 </div>
+                {formData.confirmPassword && (
+                  <div className="flex items-center gap-1.5 mt-2 text-xs">
+                    {formData.password === formData.confirmPassword ? (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                        <span className="text-green-500">Passwords match</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                        <span className="text-red-500">Passwords do not match</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 pt-2">
@@ -464,15 +510,32 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* Role Specifics */}
+              <div className="space-y-2">
+                <Label className="text-zinc-400 ml-1">Village/Town (Optional)</Label>
+                <Input name="village" value={formData.village} onChange={handleInputChange} placeholder="Enter village or town" className="bg-white/5 border-white/10 text-white rounded-xl" />
+              </div>
+
+              {/* Farmer Fields */}
               {selectedRole === "farmer" && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
                   <div className="space-y-2">
                     <Label className="text-zinc-400 ml-1">Farm Name</Label>
-                    <Input name="farmName" value={formData.farmName} onChange={handleInputChange} placeholder="Green Acres" className="bg-white/5 border-white/10 text-white rounded-xl" />
+                    <Input name="farmName" value={formData.farmName} onChange={handleInputChange} placeholder="Enter your farm name" className="bg-white/5 border-white/10 text-white rounded-xl" />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 ml-1">Farm Size (acres)</Label>
+                      <Input name="farmSize" type="number" value={formData.farmSize} onChange={handleInputChange} placeholder="e.g., 5" className="bg-white/5 border-white/10 text-white rounded-xl" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 ml-1">Experience (years)</Label>
+                      <Input name="farmingExperience" type="number" value={formData.farmingExperience} onChange={handleInputChange} placeholder="e.g., 10" className="bg-white/5 border-white/10 text-white rounded-xl" />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label className="text-zinc-400 ml-1">Crops</Label>
+                    <Label className="text-zinc-400 ml-1">Crop Types (select all that apply)</Label>
                     <div className="flex flex-wrap gap-2">
                       {cropTypes.map(crop => (
                         <button
@@ -492,10 +555,16 @@ export default function SignupPage() {
                 </div>
               )}
 
+              {/* Expert Fields */}
               {selectedRole === "expert" && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
                   <div className="space-y-2">
-                    <Label className="text-zinc-400 ml-1">Specializations</Label>
+                    <Label className="text-zinc-400 ml-1">Professional Experience (years)</Label>
+                    <Input name="expertExperience" type="number" value={formData.expertExperience} onChange={handleInputChange} placeholder="e.g., 5" className="bg-white/5 border-white/10 text-white rounded-xl" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 ml-1">Specializations (select all that apply)</Label>
                     <div className="flex flex-wrap gap-2">
                       {expertSpecializations.map(spec => (
                         <button
@@ -512,15 +581,58 @@ export default function SignupPage() {
                       ))}
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 ml-1">Credentials/Certifications</Label>
+                    <Input name="credentials" value={formData.credentials} onChange={handleInputChange} placeholder="e.g., PhD in Agriculture, Certified Agronomist" className="bg-white/5 border-white/10 text-white rounded-xl" />
+                  </div>
                 </div>
               )}
+
+              {/* Consumer Fields */}
+              {selectedRole === "consumer" && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 ml-1">Interests (select all that apply)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {consumerInterests.map(interest => (
+                        <button
+                          key={interest}
+                          type="button"
+                          onClick={() => handleMultiSelect("interests", interest)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full text-sm border transition-all",
+                            formData.interests.includes(interest) ? "bg-blue-500 text-black border-blue-500" : "bg-white/5 border-white/10 text-zinc-400 hover:border-blue-500/50"
+                          )}
+                        >
+                          {interest}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Terms Agreement */}
+              <div className="flex items-center space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={toggleAgreement}
+                  className={cn("h-5 w-5 rounded border flex items-center justify-center transition-colors", agreedToTerms ? "bg-green-500 border-green-500 text-black" : "border-zinc-500 bg-transparent")}
+                >
+                  {agreedToTerms && <CheckCircle2 className="h-3.5 w-3.5" />}
+                </button>
+                <Label onClick={toggleAgreement} className="text-sm text-zinc-400 cursor-pointer">
+                  I agree to the <span className="text-green-500 hover:underline">Terms of Service</span> and <span className="text-green-500 hover:underline">Privacy Policy</span>
+                </Label>
+              </div>
 
               <div className="flex gap-3 pt-6">
                 <Button type="button" variant="outline" className="flex-1 bg-transparent border-white/10 text-white hover:bg-white/10 hover:text-white rounded-xl" size="lg" onClick={handleBack}>
                   Back
                 </Button>
-                <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-400 text-black font-semibold rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]" size="lg" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="animate-spin" /> : "Complete Registration"}
+                <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-400 text-black font-semibold rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]" size="lg" disabled={isLoading || !agreedToTerms}>
+                  {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
                 </Button>
               </div>
             </motion.div>

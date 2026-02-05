@@ -30,7 +30,11 @@ import { TableOfContents } from "@/components/knowledge-hub/table-of-contents"
 import { ShareButtons } from "@/components/knowledge-hub/share-buttons"
 import { CommentsSection } from "@/components/knowledge-hub/comments-section"
 import { ArticleCard } from "@/components/knowledge-hub/article-card"
-import { type Article, type ArticleComment, mockArticles } from "@/lib/knowledge-hub-api"
+import {
+  type Article,
+  type ArticleComment,
+  getArticleBySlug
+} from "@/lib/knowledge-hub-api"
 
 export default function ArticleDetailPage() {
   const params = useParams()
@@ -51,26 +55,36 @@ export default function ArticleDetailPage() {
     const fetchArticle = async () => {
       setLoading(true)
       try {
-        // Simulating API call
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        const response = await getArticleBySlug(slug)
+        if (response.success) {
+          const fetchedArticle = response.data.article
+          setArticle(fetchedArticle)
+          setLikeCount(fetchedArticle.stats.likes)
 
-        const foundArticle = mockArticles.find((a) => a.slug === slug)
-        if (foundArticle) {
-          setArticle(foundArticle)
-          setLikeCount(foundArticle.stats.likes)
-          setRelatedArticles(
-            mockArticles
-              .filter(
-                (a) =>
-                  a._id !== foundArticle._id &&
-                  (a.category.name === foundArticle.category.name ||
-                    a.tags.some((t) => foundArticle.tags.includes(t)))
-              )
-              .slice(0, 4)
-          )
+          if (response.data.relatedArticles) {
+            setRelatedArticles(response.data.relatedArticles)
+          } else {
+            // Fallback attempt to fetch related if not provided in detail response
+            // This might not be needed if backend always returns related
+            // But let's leave related empty if not provided, or we could fetch based on category
+          }
+
+          // Check interaction status
+          if ('isLiked' in (fetchedArticle as any)) {
+            setIsLiked(!!(fetchedArticle as any).isLiked);
+          }
+          if ('isBookmarked' in (fetchedArticle as any)) {
+            setIsBookmarked(!!(fetchedArticle as any).isBookmarked);
+          }
+          if ('author' in fetchedArticle && 'isFollowing' in (fetchedArticle.author as any)) {
+            setIsFollowing(!!(fetchedArticle.author as any).isFollowing);
+          }
+
+          // Actually getArticleBySlug response includes relatedArticles, so we used that above.
         }
       } catch (error) {
         console.error("Error fetching article:", error)
+        setArticle(null)
       } finally {
         setLoading(false)
       }
@@ -396,11 +410,11 @@ export default function ArticleDetailPage() {
                         <BadgeCheck className="h-4 w-4 text-primary" />
                       )}
                     </Link>
-                    {article.author.expertProfile && (
+                    {(article.author.expertProfile?.experience !== undefined && article.author.expertProfile?.experience !== null) ? (
                       <p className="text-sm text-muted-foreground">
                         {article.author.expertProfile.experience}+ years experience
                       </p>
-                    )}
+                    ) : null}
                   </div>
                   {article.author.bio && (
                     <p className="text-sm text-muted-foreground text-center mb-4 line-clamp-3">

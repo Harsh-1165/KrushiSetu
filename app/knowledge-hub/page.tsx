@@ -45,6 +45,9 @@ import {
   ARTICLE_CATEGORIES,
   mockArticles,
   type ArticleFilters,
+  getArticles,
+  getFeaturedArticles,
+  getTrendingArticles,
 } from "@/lib/knowledge-hub-api"
 
 export default function KnowledgeHubPage() {
@@ -79,69 +82,51 @@ export default function KnowledgeHubPage() {
   const fetchArticles = useCallback(async () => {
     setLoading(true)
     try {
-      // Simulating API call with mock data
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      let filtered = [...mockArticles]
-
-      // Apply category filter
-      if (selectedCategory) {
-        filtered = filtered.filter(
-          (a) => a.category.name.toLowerCase().replace(/\s+/g, "-") === selectedCategory
-        )
+      const filters: ArticleFilters = {
+        page,
+        limit: 12,
+        category: selectedCategory || undefined,
+        search: searchQuery || undefined,
+        sort: sortBy || undefined,
+        difficulty: difficulty || undefined,
       }
 
-      // Apply search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase()
-        filtered = filtered.filter(
-          (a) =>
-            a.title.toLowerCase().includes(query) ||
-            a.excerpt.toLowerCase().includes(query) ||
-            a.tags.some((t) => t.toLowerCase().includes(query))
-        )
-      }
+      const response = await getArticles(filters)
+      if (response.success) {
+        setArticles(response.data.articles)
+        setTotalPages(response.data.pagination.pages)
 
-      // Apply difficulty filter
-      if (difficulty) {
-        filtered = filtered.filter((a) => a.difficulty === difficulty)
-      }
+        // Fetch featured and trending properly (or assume backend handles it if we had specific endpoints)
+        // For now, let's just keep the state but ideally we should have separate effect or API calls 
+        // if these lists are different from the main search results.
+        // However, the original code filtered mockArticles. 
+        // Let's rely on the backend for the main list. 
+        // For featured/trending on the side/top, we might need separate calls if they aren't part of this response.
 
-      // Apply sorting
-      switch (sortBy) {
-        case "popular":
-          filtered.sort((a, b) => b.views - a.views)
-          break
-        case "trending":
-          filtered.sort((a, b) => b.stats.likes - a.stats.likes)
-          break
-        case "oldest":
-          filtered.sort(
-            (a, b) =>
-              new Date(a.publishedAt || a.createdAt).getTime() -
-              new Date(b.publishedAt || b.createdAt).getTime()
-          )
-          break
-        default:
-          filtered.sort(
-            (a, b) =>
-              new Date(b.publishedAt || b.createdAt).getTime() -
-              new Date(a.publishedAt || a.createdAt).getTime()
-          )
       }
-
-      setArticles(filtered)
-      setTotalPages(Math.ceil(filtered.length / 12))
-      setFeaturedArticles(mockArticles.filter((a) => a.isFeatured).slice(0, 3))
-      setTrendingArticles(
-        [...mockArticles].sort((a, b) => b.views - a.views).slice(0, 5)
-      )
     } catch (error) {
       console.error("Error fetching articles:", error)
     } finally {
       setLoading(false)
     }
-  }, [selectedCategory, searchQuery, sortBy, difficulty])
+  }, [selectedCategory, searchQuery, sortBy, difficulty, page])
+
+  // Need to fetch featured and trending separately on mount since they shouldn't change with search filters
+  useEffect(() => {
+    const fetchSideData = async () => {
+      try {
+        const [featuredRes, trendingRes] = await Promise.all([
+          getFeaturedArticles(),
+          getTrendingArticles()
+        ])
+        if (featuredRes.success) setFeaturedArticles(featuredRes.data.articles)
+        if (trendingRes.success) setTrendingArticles(trendingRes.data.articles)
+      } catch (err) {
+        console.error("Error fetching side data:", err)
+      }
+    }
+    fetchSideData()
+  }, [])
 
   useEffect(() => {
     fetchArticles()

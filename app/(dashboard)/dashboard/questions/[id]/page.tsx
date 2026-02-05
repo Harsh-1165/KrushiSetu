@@ -97,6 +97,15 @@ import {
 } from "@/lib/advisory-api"
 import { useUser } from "@/contexts/auth-context"
 
+// Helper to get full file URL
+const getFileUrl = (url?: string) => {
+  if (!url) return "/placeholder.svg"
+  if (url.startsWith("http")) return url
+  // Assuming API_URL is like http://localhost:5000/api/v1, we want http://localhost:5000
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1").replace("/api/v1", "")
+  return `${baseUrl}${url}`
+}
+
 // Category icons
 const categoryIcons: Record<string, typeof Bug> = {
   crop_diseases: Bug,
@@ -446,7 +455,7 @@ function AnswerCard({
               {answer.attachments.map((att, index) => (
                 <a
                   key={index}
-                  href={att.url}
+                  href={getFileUrl(att.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted transition-colors"
@@ -952,14 +961,14 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                     {question.attachments.map((att, index) => (
                       <a
                         key={index}
-                        href={att.url}
+                        href={getFileUrl(att.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="relative group"
                       >
                         {att.type === "image" ? (
                           <img
-                            src={att.url || "/placeholder.svg"}
+                            src={getFileUrl(att.url)}
                             alt={att.filename}
                             className="w-full h-24 object-cover rounded-lg border"
                           />

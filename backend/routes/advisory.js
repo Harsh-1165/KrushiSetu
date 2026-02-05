@@ -246,7 +246,7 @@ const sendNotification = async ({ userId, type, title, message, data }) => {
 router.post(
   "/questions",
   authenticate,
-  authorize("farmer", "consumer"),
+  authorize("farmer", "consumer", "expert"),
   upload.array("attachments", 5),
   asyncHandler(async (req, res) => {
     const { title, description, category, subcategory, cropType, urgency, location, tags } = req.body
@@ -264,11 +264,11 @@ router.post(
     // Process uploaded attachments
     const attachments = req.files
       ? req.files.map((file) => ({
-          type: file.mimetype.startsWith("image/") ? "image" : "video",
-          url: `/uploads/advisory/${file.filename}`,
-          filename: file.originalname,
-          size: file.size,
-        }))
+        type: file.mimetype.startsWith("image/") ? "image" : "video",
+        url: `/uploads/advisory/${file.filename}`,
+        filename: file.originalname,
+        size: file.size,
+      }))
       : []
 
     // Parse location if provided as string
@@ -813,11 +813,11 @@ router.post(
     // Process attachments
     const attachments = req.files
       ? req.files.map((file) => ({
-          type: file.mimetype.startsWith("image/") ? "image" : "video",
-          url: `/uploads/advisory/${file.filename}`,
-          filename: file.originalname,
-          size: file.size,
-        }))
+        type: file.mimetype.startsWith("image/") ? "image" : "video",
+        url: `/uploads/advisory/${file.filename}`,
+        filename: file.originalname,
+        size: file.size,
+      }))
       : []
 
     // Parse recommendations if provided as string

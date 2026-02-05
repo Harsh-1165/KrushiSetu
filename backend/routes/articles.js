@@ -521,7 +521,7 @@ router.get(
       { slug, status: "published", isDeleted: { $ne: true } },
       { $inc: { views: 1 } },
       { new: true }
-    ).populate("author", "name avatar bio role expertProfile followers followersCount")
+    ).populate("author", "name avatar bio role expertProfile expertProfile.experience expertProfile.specializations expertProfile.verified followers followersCount")
 
     if (!article) {
       throw new AppError("Article not found", 404)

@@ -158,7 +158,7 @@ router.post(
   asyncHandler(async (req, res) => {
     validateRequest(req)
 
-    const { email, password, name, phone, role } = req.body
+    const { email, password, name, phone, role, farmerProfile, expertProfile, consumerProfile, location } = req.body
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -180,7 +180,7 @@ router.post(
     const { token: verificationToken, hashedToken, expiresAt } = generateVerificationToken()
 
     // Create user
-    const user = await User.create({
+    const userData = {
       email,
       password: hashedPassword,
       name,
@@ -196,7 +196,26 @@ router.post(
       security: {
         lastPasswordChange: new Date(),
       },
-    })
+    }
+
+    // Add role-specific profiles
+    if (role === "farmer" && farmerProfile) {
+      userData.farmerProfile = farmerProfile
+    } else if (role === "expert" && expertProfile) {
+      userData.expertProfile = expertProfile
+    }
+
+    // Add address if location provided
+    if (location) {
+      userData.address = {
+        state: location.state,
+        district: location.district,
+        village: location.village,
+        country: "India",
+      }
+    }
+
+    const user = await User.create(userData)
 
     // Send verification email
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&email=${email}`

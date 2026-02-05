@@ -27,8 +27,8 @@ export function ArticleCard({
   isLiked = false,
   isBookmarked = false,
 }: ArticleCardProps) {
-  const authorName = `${article.author.name.first} ${article.author.name.last}`
-  const authorInitials = `${article.author.name.first[0]}${article.author.name.last[0]}`
+  const authorName = article.author && typeof article.author === 'object' && 'name' in article.author ? `${article.author.name.first} ${article.author.name.last}` : "Unknown Author"
+  const authorInitials = article.author && typeof article.author === 'object' && 'name' in article.author ? `${article.author.name.first?.[0] || ""}${article.author.name.last?.[0] || ""}` : "?"
 
   if (variant === "compact") {
     return (

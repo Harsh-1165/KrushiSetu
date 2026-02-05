@@ -1,4 +1,4 @@
-// Knowledge Hub API utilities for GreenTrace
+import { fetchWithAuth } from "@/lib/api"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
 
@@ -171,7 +171,7 @@ export async function getArticles(filters: ArticleFilters = {}): Promise<{
   if (filters.featured) params.set("featured", "true")
   if (filters.tags?.length) params.set("tags", filters.tags.join(","))
 
-  const response = await fetch(`${API_BASE_URL}/articles?${params.toString()}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles?${params.toString()}`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -191,7 +191,7 @@ export async function getArticleBySlug(slug: string): Promise<{
     relatedArticles: Article[]
   }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/${slug}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/${slug}`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -208,7 +208,7 @@ export async function getFeaturedArticles(limit = 5): Promise<{
   success: boolean
   data: { articles: Article[] }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/featured?limit=${limit}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/featured?limit=${limit}`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -225,7 +225,7 @@ export async function getTrendingArticles(limit = 10): Promise<{
   success: boolean
   data: { articles: Article[] }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/trending?limit=${limit}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/trending?limit=${limit}`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -250,7 +250,7 @@ export async function getArticlesByCategory(
     pagination: { page: number; limit: number; total: number; pages: number }
   }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/category/${category}?page=${page}&limit=${limit}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/category/${category}?page=${page}&limit=${limit}`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -267,7 +267,7 @@ export async function getCategoryStats(): Promise<{
   success: boolean
   data: { categories: ArticleCategory[] }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/categories/stats`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/categories/stats`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -285,10 +285,9 @@ export async function createArticle(data: ArticleCreateData): Promise<{
   message: string
   data: { article: Article }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify(data),
   })
   const result = await response.json()
@@ -311,10 +310,9 @@ export async function updateArticle(
   message: string
   data: { article: Article }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify(data),
   })
   const result = await response.json()
@@ -333,9 +331,8 @@ export async function deleteArticle(id: string): Promise<{
   success: boolean
   message: string
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/${id}`, {
     method: "DELETE",
-    credentials: "include",
   })
   const result = await response.json()
 
@@ -354,9 +351,8 @@ export async function toggleArticleLike(id: string): Promise<{
   message: string
   data: { likes: number; isLiked: boolean }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/${id}/like`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/${id}/like`, {
     method: "POST",
-    credentials: "include",
   })
   const result = await response.json()
 
@@ -375,9 +371,8 @@ export async function toggleArticleBookmark(id: string): Promise<{
   message: string
   data: { bookmarks: number; isBookmarked: boolean }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/${id}/bookmark`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/${id}/bookmark`, {
     method: "POST",
-    credentials: "include",
   })
   const result = await response.json()
 
@@ -395,9 +390,7 @@ export async function getBookmarkedArticles(): Promise<{
   success: boolean
   data: { articles: Article[] }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/bookmarks`, {
-    credentials: "include",
-  })
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/bookmarks`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -422,9 +415,7 @@ export async function getMyArticles(filters: { status?: string; page?: number; l
   if (filters.page) params.set("page", filters.page.toString())
   if (filters.limit) params.set("limit", filters.limit.toString())
 
-  const response = await fetch(`${API_BASE_URL}/articles/my?${params.toString()}`, {
-    credentials: "include",
-  })
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/my?${params.toString()}`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -448,7 +439,7 @@ export async function getArticleComments(
     pagination: { page: number; limit: number; total: number; pages: number }
   }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/${articleId}/comments?page=${page}&limit=${limit}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/${articleId}/comments?page=${page}&limit=${limit}`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -470,10 +461,9 @@ export async function addArticleComment(
   message: string
   data: { comment: ArticleComment }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/${articleId}/comments`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/${articleId}/comments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ content, parentCommentId }),
   })
   const result = await response.json()
@@ -493,9 +483,8 @@ export async function toggleCommentLike(commentId: string): Promise<{
   message: string
   data: { likeCount: number; isLiked: boolean }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/comments/${commentId}/like`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/comments/${commentId}/like`, {
     method: "POST",
-    credentials: "include",
   })
   const result = await response.json()
 
@@ -522,7 +511,7 @@ export async function getAuthorProfile(authorId: string): Promise<{
     }
   }
 }> {
-  const response = await fetch(`${API_BASE_URL}/articles/author/${authorId}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/articles/author/${authorId}`)
   const result = await response.json()
 
   if (!response.ok) {
@@ -540,9 +529,8 @@ export async function toggleFollowAuthor(authorId: string): Promise<{
   message: string
   data: { isFollowing: boolean; followersCount: number }
 }> {
-  const response = await fetch(`${API_BASE_URL}/users/${authorId}/follow`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/users/${authorId}/follow`, {
     method: "POST",
-    credentials: "include",
   })
   const result = await response.json()
 
@@ -563,9 +551,8 @@ export async function uploadArticleImage(file: File): Promise<{
   const formData = new FormData()
   formData.append("image", file)
 
-  const response = await fetch(`${API_BASE_URL}/uploads/article-image`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/uploads/article-image`, {
     method: "POST",
-    credentials: "include",
     body: formData,
   })
   const result = await response.json()

@@ -37,16 +37,16 @@ import { toast } from "sonner";
 import { createArticle, type ArticleCreateData } from "@/lib/knowledge-hub-api";
 
 const CATEGORIES = [
-  { value: "crop-management", label: "Crop Management" },
-  { value: "pest-control", label: "Pest Control" },
-  { value: "organic-farming", label: "Organic Farming" },
-  { value: "soil-health", label: "Soil Health" },
-  { value: "irrigation", label: "Irrigation" },
-  { value: "market-insights", label: "Market Insights" },
-  { value: "weather-climate", label: "Weather & Climate" },
-  { value: "technology", label: "Technology" },
-  { value: "livestock", label: "Livestock" },
-  { value: "government-schemes", label: "Government Schemes" },
+  { value: "Crop Management", label: "Crop Management" },
+  { value: "Pest Control", label: "Pest Control" },
+  { value: "Organic Farming", label: "Organic Farming" },
+  { value: "Soil Health", label: "Soil Health" },
+  { value: "Irrigation", label: "Irrigation" },
+  { value: "Market Insights", label: "Market Insights" },
+  { value: "Weather Advisory", label: "Weather Advisory" },
+  { value: "Technology", label: "Technology" },
+  { value: "Success Stories", label: "Success Stories" },
+  { value: "Government Schemes", label: "Government Schemes" },
 ];
 
 export default function WriteArticlePage() {
@@ -336,8 +336,8 @@ export default function WriteArticlePage() {
                 <div className="space-y-2">
                   <Label>Tags</Label>
                   <TagInput
-                    tags={formData.tags}
-                    onTagsChange={(tags) =>
+                    value={formData.tags}
+                    onChange={(tags) =>
                       setFormData((prev) => ({ ...prev, tags }))
                     }
                     placeholder="Add tags..."
