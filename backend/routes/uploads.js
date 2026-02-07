@@ -14,6 +14,7 @@ const {
   uploadProductImages,
   uploadDocuments,
   uploadArticleCover,
+  uploadAdvisoryImage,
   deleteFile,
   config,
 } = require("../middleware/fileUpload")
@@ -22,6 +23,32 @@ const AppError = require("../utils/AppError")
 const User = require("../models/User")
 const Product = require("../models/Product")
 const Article = require("../models/Article")
+
+// =================================================================
+// ADVISORY IMAGE ROUTES
+// =================================================================
+
+/**
+ * @route   POST /api/uploads/advisory
+ * @desc    Upload advisory crop image
+ * @access  Private
+ */
+router.post(
+  "/advisory",
+  protect,
+  uploadAdvisoryImage,
+  asyncHandler(async (req, res) => {
+    if (!req.uploadedFile) {
+      throw new AppError("No image uploaded", 400)
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Image uploaded successfully",
+      url: req.uploadedFile.url,
+    })
+  }),
+)
 
 // =================================================================
 // AVATAR ROUTES

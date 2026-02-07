@@ -29,6 +29,7 @@ const config = {
     productImage: 5 * 1024 * 1024, // 5MB
     document: 10 * 1024 * 1024, // 10MB
     articleCover: 5 * 1024 * 1024, // 5MB
+    advisoryImage: 5 * 1024 * 1024, // 5MB
     totalUpload: 50 * 1024 * 1024, // 50MB total per request
   },
 
@@ -46,6 +47,7 @@ const config = {
     productThumbnail: { width: 400, height: 400, quality: 80 },
     articleCover: { width: 1600, height: 900, quality: 85 },
     articleThumbnail: { width: 600, height: 338, quality: 80 },
+    advisoryImage: { width: 1200, height: 1200, quality: 85 },
   },
 }
 
@@ -343,6 +345,18 @@ const articleCoverUpload = multer({
 }).single("cover")
 
 /**
+ * Advisory image upload configuration (single "image" field to match frontend)
+ */
+const advisoryImageUpload = multer({
+  storage: memoryStorage,
+  limits: {
+    fileSize: config.limits.advisoryImage,
+    files: 1,
+  },
+  fileFilter: createFileFilter(config.allowedTypes.image),
+}).single("image")
+
+/**
  * Mixed upload (images + documents)
  */
 const mixedUpload = multer({
@@ -546,6 +560,41 @@ const processArticleCoverUpload = async (req, res, next) => {
   }
 }
 
+/**
+ * Process advisory image upload
+ */
+const processAdvisoryImageUpload = async (req, res, next) => {
+  if (!req.file) {
+    return next()
+  }
+
+  try {
+    const userId = req.user.id
+    const filename = generateFilename(req.file.originalname, "advisory-")
+    const key = `advisory/${userId}/${filename}`
+
+    // Process image
+    const processedBuffer = await processImage(req.file.buffer, {
+      ...config.imageOptimization.advisoryImage,
+      fit: "inside",
+    })
+
+    // Upload to local storage
+    const url = await uploadToLocal(processedBuffer, key)
+
+    req.uploadedFile = {
+      url,
+      key,
+      originalName: req.file.originalname,
+      size: processedBuffer.length,
+    }
+
+    next()
+  } catch (error) {
+    next(new AppError(`Advisory image processing failed: ${error.message}`, 500))
+  }
+}
+
 // =================================================================
 // FILE DELETION
 // =================================================================
@@ -666,6 +715,16 @@ const uploadArticleCover = [
 ]
 
 /**
+ * Advisory image upload chain
+ */
+const uploadAdvisoryImage = [
+  advisoryImageUpload,
+  handleMulterError,
+  validateFileType(config.allowedTypes.image),
+  processAdvisoryImageUpload,
+]
+
+/**
  * Mixed upload chain (for questions with images and documents)
  */
 const uploadMixed = [mixedUpload, handleMulterError, validateTotalSize(config.limits.totalUpload)]
@@ -683,6 +742,7 @@ module.exports = {
   productImagesUpload,
   documentUpload,
   articleCoverUpload,
+  advisoryImageUpload,
   mixedUpload,
 
   // Middleware chains (recommended)
@@ -690,6 +750,7 @@ module.exports = {
   uploadProductImages,
   uploadDocuments,
   uploadArticleCover,
+  uploadAdvisoryImage,
   uploadMixed,
 
   // Processing functions

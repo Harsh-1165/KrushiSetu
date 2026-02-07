@@ -27,6 +27,8 @@ import {
   Star,
   Plus,
   BookOpen,
+  Sprout,
+  ClipboardList,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -87,12 +89,14 @@ const getNavItems = (role: string) => {
     farmer: [
       { title: "My Products", href: "/dashboard/products", icon: Package },
       { title: "Add Product", href: "/dashboard/products/new", icon: Plus },
+      { title: "Crop Advisory", href: "/dashboard/advisory", icon: Sprout },
       { title: "Orders", href: "/dashboard/orders", icon: ShoppingCart, badge: 5 },
       { title: "Inventory", href: "/dashboard/inventory", icon: BarChart3 },
       { title: "Analytics", href: "/dashboard/analytics", icon: TrendingUp },
       { title: "Reviews", href: "/dashboard/reviews", icon: Star },
     ],
     expert: [
+      { title: "Advisory Requests", href: "/expert/advisory", icon: ClipboardList, badge: 5 },
       { title: "Questions", href: "/dashboard/questions", icon: HelpCircle, badge: 12 },
       { title: "My Answers", href: "/dashboard/questions/my", icon: MessageSquare },
       { title: "Articles", href: "/knowledge-hub", icon: FileText },
