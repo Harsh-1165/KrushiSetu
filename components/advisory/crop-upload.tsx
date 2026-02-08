@@ -6,7 +6,7 @@ import { useDropzone } from "react-dropzone"
 import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { apiUrl } from "@/lib/api"
+import { apiUrl, fetchWithAuth } from "@/lib/api"
 
 interface CropUploadProps {
     onUpload: (urls: string[]) => void
@@ -62,7 +62,7 @@ export function CropUpload({ onUpload, maxFiles = 3 }: CropUploadProps) {
 
                 // Use the existing upload route (assuming it exists based on other routes)
                 // Adjust endpoint if necessary
-                const res = await fetch(apiUrl("/uploads/advisory"), {
+                const res = await fetchWithAuth(apiUrl("/uploads/advisory"), {
                     method: "POST",
                     body: formData,
                     // Don't set Content-Type header, browser sets it with boundary for FormData

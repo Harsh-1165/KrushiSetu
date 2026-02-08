@@ -21,6 +21,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { apiUrl, fetchWithAuth } from "@/lib/api"
 
 export default function ExpertAdvisoryPage() {
@@ -39,8 +46,9 @@ export default function ExpertAdvisoryPage() {
     const fetchRequests = async () => {
         try {
             const res = await fetchWithAuth(apiUrl("/advisory"))
-            if (res.success) {
-                setRequests(res.data)
+            const data = await res.json()
+            if (data.success) {
+                setRequests(data.data)
             }
         } catch (err) {
             console.error(err)
@@ -67,9 +75,11 @@ export default function ExpertAdvisoryPage() {
                 })
             })
 
-            if (res.success) {
+            const data = await res.json()
+
+            if (data.success) {
                 // Update list locally
-                setRequests(prev => prev.map(r => r._id === selectedRequest._id ? res.data : r))
+                setRequests(prev => prev.map(r => r._id === selectedRequest._id ? data.data : r))
                 setSelectedRequest(null) // Close dialog
             }
         } catch (err) {
@@ -125,7 +135,13 @@ export default function ExpertAdvisoryPage() {
                             </CardHeader>
                             <CardContent className="pb-3">
                                 <div className="aspect-video bg-zinc-100 rounded-lg overflow-hidden relative mb-3">
-                                    {req.images[0] && <img src={req.images[0]} className="w-full h-full object-cover" alt="Crop" />}
+                                    {req.images[0] && (
+                                        <img
+                                            src={req.images[0].startsWith("http") ? req.images[0] : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '')}${req.images[0]}`}
+                                            className="w-full h-full object-cover"
+                                            alt="Crop"
+                                        />
+                                    )}
                                     {req.aiPrediction && (
                                         <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-sm p-2 rounded flex items-center gap-2">
                                             <Bot className="h-3 w-3 text-green-400" />
@@ -156,7 +172,11 @@ export default function ExpertAdvisoryPage() {
                             {/* Left: Case Details */}
                             <div className="space-y-6">
                                 <div className="aspect-video bg-zinc-100 rounded-xl overflow-hidden shadow-inner">
-                                    <img src={selectedRequest.images[0]} className="w-full h-full object-contain" alt="Crop" />
+                                    <img
+                                        src={selectedRequest.images[0].startsWith("http") ? selectedRequest.images[0] : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '')}${selectedRequest.images[0]}`}
+                                        className="w-full h-full object-contain"
+                                        alt="Crop"
+                                    />
                                 </div>
 
                                 <div className="space-y-4">
@@ -180,8 +200,8 @@ export default function ExpertAdvisoryPage() {
                                     </div>
 
                                     <div className="bg-zinc-50 p-4 rounded-lg border">
-                                        <Label className="text-muted-foreground mb-1 block">Description</Label>
-                                        <p className="text-sm">{selectedRequest.description}</p>
+                                        <Label className="text-zinc-600 mb-1 block">Description</Label>
+                                        <p className="text-sm text-zinc-900">{selectedRequest.description}</p>
                                     </div>
 
                                     {selectedRequest.aiPrediction && (

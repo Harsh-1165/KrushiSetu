@@ -78,8 +78,9 @@ export default function AdvisoryPage() {
         const loadHistory = async () => {
             try {
                 const res = await fetchWithAuth(apiUrl("/advisory"))
-                if (res.success) {
-                    setHistory(res.data)
+                const data = await res.json()
+                if (data.success) {
+                    setHistory(data.data)
                 }
             } catch (err) {
                 console.error("Failed to load history", err)
@@ -107,12 +108,15 @@ export default function AdvisoryPage() {
         try {
             const res = await fetchWithAuth(apiUrl("/advisory"), {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData)
             })
 
-            if (res.success) {
-                setNewAdvisoryId(res.data._id)
-                setHistory([res.data, ...history])
+            const data = await res.json()
+
+            if (data.success) {
+                setNewAdvisoryId(data.data._id)
+                setHistory([data.data, ...history])
                 // Reset form
                 setFormData({
                     cropType: "",
@@ -179,12 +183,38 @@ export default function AdvisoryPage() {
                                 <CardContent>
                                     <form onSubmit={handleSubmit} className="space-y-6">
                                         {/* Image Upload */}
-                                        <div className="space-y-2">
-                                            <Label className="text-zinc-300">Crop Images</Label>
-                                            <CropUpload
-                                                onUpload={(urls) => setFormData({ ...formData, images: urls })}
-                                                maxFiles={3}
-                                            />
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-zinc-300">Crop Images</Label>
+                                                <CropUpload
+                                                    onUpload={(urls) => setFormData({ ...formData, images: urls })}
+                                                    maxFiles={3}
+                                                />
+                                            </div>
+
+                                            {/* Preview Uploaded Images */}
+                                            {formData.images.length > 0 && (
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    {formData.images.map((url, i) => {
+                                                        const src = url.startsWith("http")
+                                                            ? url
+                                                            : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '')}${url}`
+
+                                                        return (
+                                                            <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-green-500/50 group">
+                                                                <img
+                                                                    src={src}
+                                                                    alt={`Uploaded crop ${i + 1}`}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                    <CheckCircle2 className="text-green-500 w-8 h-8" />
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">

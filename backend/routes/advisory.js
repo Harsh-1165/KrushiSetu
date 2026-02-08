@@ -56,15 +56,18 @@ router.get('/', protect, async (req, res) => {
   try {
     let query;
 
+    console.log(`GET /api/advisory - User: ${req.user.id}, Role: ${req.user.role}`);
+
     if (req.user.role === 'expert') {
       // Expert sees all pending requests first, or filtered by status
       query = CropAdvisory.find().populate('farmer', 'name email').sort({ createdAt: -1 });
     } else {
       // Farmer sees only their own requests
-      query = CropAdvisory.find({ farmer: req.user.id }).sort({ createdAt: -1 });
+      query = CropAdvisory.find({ farmer: req.user.id }).populate('farmer', 'name email').sort({ createdAt: -1 });
     }
 
     const advisories = await query;
+    console.log(`Found ${advisories.length} advisories`);
 
     res.status(200).json({
       success: true,
