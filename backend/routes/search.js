@@ -29,11 +29,21 @@ const SearchHistory = require("../models/SearchHistory")
 
 // Redis for caching (optional)
 let redis = null
-try {
-  const Redis = require("ioredis")
-  redis = new Redis(process.env.REDIS_URL)
-} catch (err) {
-  console.log("Redis not available, caching disabled")
+if (process.env.REDIS_URL) {
+  try {
+    const Redis = require("ioredis")
+    redis = new Redis(process.env.REDIS_URL)
+
+    // Check for connection errors without crashing
+    redis.on('error', (err) => {
+      console.error('Redis connection error:', err)
+      redis = null // Disable redis if connection fails
+    })
+  } catch (err) {
+    console.log("Redis not available, caching disabled")
+  }
+} else {
+  console.log("Redis URL not provided, caching disabled")
 }
 
 // ===========================================
@@ -1645,10 +1655,10 @@ router.get(
 
           // Merge and dedupe
           const topicMap = new Map()
-          ;[...productTags, ...questionTags].forEach((t) => {
-            const existing = topicMap.get(t._id) || 0
-            topicMap.set(t._id, existing + t.count)
-          })
+            ;[...productTags, ...questionTags].forEach((t) => {
+              const existing = topicMap.get(t._id) || 0
+              topicMap.set(t._id, existing + t.count)
+            })
 
           results.topics = Array.from(topicMap.entries())
             .map(([topic, count]) => ({ topic, count }))

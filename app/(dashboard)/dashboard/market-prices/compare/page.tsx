@@ -82,7 +82,7 @@ interface ComparisonData {
 interface ComparisonResult {
   crop: string
   variety: string
-  period: Period
+  period: string // API returns string, not specific literal type
   dateRange: { startDate: string; endDate: string }
   comparison: ComparisonData[]
   statistics: {
@@ -159,17 +159,21 @@ export default function PriceComparePage() {
       else setLoading(true)
 
       const response = await priceApi.compare({
-        crop,
+        commodity: crop, // API expects 'commodity'
         states: selectedStates.length > 0 ? selectedStates.join(",") : undefined,
         period,
       })
 
-      setComparisonData(response.data)
+      if (response.success) {
+        setComparisonData(response.data as unknown as ComparisonResult)
+      } else {
+        console.error("Comparison API failed:", response.message)
+        // Fallback to empty state
+        setComparisonData(null)
+      }
     } catch (error) {
       console.log("[v0] Error fetching comparison:", error)
-      // Generate mock data for demonstration
-      const mockData = generateMockComparisonData(crop, selectedStates, period)
-      setComparisonData(mockData)
+      setComparisonData(null)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -223,6 +227,7 @@ export default function PriceComparePage() {
   }) : []
 
   const chartData = sortedComparison.slice(0, 15)
+
 
   const getBarColor = (entry: ComparisonData, index: number) => {
     if (!comparisonData?.statistics) return "hsl(var(--chart-1))"
@@ -329,68 +334,80 @@ export default function PriceComparePage() {
           {/* Recommendation Cards */}
           {comparisonData?.recommendation && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-green-200 dark:border-green-800">
-                <CardContent className="pt-4">
+              <Card className="bg-gradient-to-br from-green-50 to-white dark:from-green-950/30 dark:to-background border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-green-100 dark:bg-green-900">
-                      <TrendingDown className="h-5 w-5 text-green-600" />
+                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 border border-green-200 dark:border-green-800">
+                      <TrendingDown className="h-6 w-6 text-green-700 dark:text-green-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Best to Buy</p>
+                      <p className="text-sm font-medium text-muted-foreground">Best to Buy</p>
                       {comparisonData.recommendation.bestMarketToBuy ? (
-                        <>
-                          <p className="font-semibold">{comparisonData.recommendation.bestMarketToBuy.name}</p>
-                          <p className="text-sm text-muted-foreground">{comparisonData.recommendation.bestMarketToBuy.state}</p>
-                          <p className="text-lg font-bold text-green-600">
+                        <div className="mt-1">
+                          <p className="text-lg font-bold text-foreground">
+                            {comparisonData.recommendation.bestMarketToBuy.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {comparisonData.recommendation.bestMarketToBuy.state}
+                          </p>
+                          <p className="text-2xl font-bold text-green-600 mt-2">
                             {formatPrice(comparisonData.recommendation.bestMarketToBuy.price)}
                           </p>
-                        </>
+                        </div>
                       ) : (
-                        <p className="text-muted-foreground">No data available</p>
+                        <p className="text-muted-foreground mt-1">No data available</p>
                       )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-red-200 dark:border-red-800">
-                <CardContent className="pt-4">
+              <Card className="bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-background border-red-200 dark:border-red-800 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-red-100 dark:bg-red-900">
-                      <TrendingUp className="h-5 w-5 text-red-600" />
+                    <div className="p-3 rounded-full bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800">
+                      <TrendingUp className="h-6 w-6 text-red-700 dark:text-red-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Best to Sell</p>
+                      <p className="text-sm font-medium text-muted-foreground">Best to Sell</p>
                       {comparisonData.recommendation.bestMarketToSell ? (
-                        <>
-                          <p className="font-semibold">{comparisonData.recommendation.bestMarketToSell.name}</p>
-                          <p className="text-sm text-muted-foreground">{comparisonData.recommendation.bestMarketToSell.state}</p>
-                          <p className="text-lg font-bold text-red-600">
+                        <div className="mt-1">
+                          <p className="text-lg font-bold text-foreground">
+                            {comparisonData.recommendation.bestMarketToSell.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {comparisonData.recommendation.bestMarketToSell.state}
+                          </p>
+                          <p className="text-2xl font-bold text-red-600 mt-2">
                             {formatPrice(comparisonData.recommendation.bestMarketToSell.price)}
                           </p>
-                        </>
+                        </div>
                       ) : (
-                        <p className="text-muted-foreground">No data available</p>
+                        <p className="text-muted-foreground mt-1">No data available</p>
                       )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="pt-4">
+              <Card className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/30 dark:to-background border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-muted">
-                      <ArrowUpDown className="h-5 w-5" />
+                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 border border-blue-200 dark:border-blue-800">
+                      <ArrowUpDown className="h-6 w-6 text-blue-700 dark:text-blue-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Price Difference</p>
-                      <p className="text-2xl font-bold">
-                        {formatPrice(comparisonData.recommendation.priceDifference)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Across {comparisonData.statistics?.marketCount || 0} markets
-                      </p>
+                      <p className="text-sm font-medium text-muted-foreground">Price Difference</p>
+                      <div className="mt-1">
+                        <p className="text-3xl font-bold text-foreground">
+                          {formatPrice(comparisonData.recommendation.priceDifference)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 bg-background/50 px-2 py-1 rounded-full inline-block border">
+                          Across {comparisonData.statistics?.marketCount || 0} markets
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -446,32 +463,30 @@ export default function PriceComparePage() {
             <CardContent>
               <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <TooltipProvider>
-                    <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={true} vertical={false} />
-                      <XAxis 
-                        type="number"
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `₹${value}`}
-                      />
-                      <YAxis 
-                        type="category"
-                        dataKey="mandi"
-                        tick={{ fontSize: 11 }}
-                        tickLine={false}
-                        axisLine={false}
-                        width={100}
-                      />
-                      <Tooltip content={<CustomBarTooltip />} />
-                      <Bar dataKey="avgModalPrice" name="Modal Price" radius={[0, 4, 4, 0]}>
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={getBarColor(entry, index)} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </TooltipProvider>
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={true} vertical={false} />
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `₹${value}`}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="mandi"
+                      tick={{ fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={100}
+                    />
+                    <Tooltip content={<CustomBarTooltip />} />
+                    <Bar dataKey="avgModalPrice" name="Modal Price" radius={[0, 4, 4, 0]}>
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getBarColor(entry, index)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>

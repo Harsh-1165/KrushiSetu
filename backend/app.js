@@ -30,6 +30,7 @@ const orderRoutes = require("./routes/orders")
 const expertRoutes = require("./routes/expert")
 const cartRoutes = require("./routes/cart")
 const articleRoutes = require("./routes/articles")
+const aiFeedbackRoutes = require("./routes/aiFeedback")
 
 // Initialize Express app
 const app = express()
@@ -170,6 +171,7 @@ app.use("/api/v1/orders", orderRoutes)
 app.use("/api/v1/expert", expertRoutes)
 app.use("/api/v1/cart", cartRoutes)
 app.use("/api/v1/articles", articleRoutes)
+app.use("/api/v1/ai-feedback", aiFeedbackRoutes)
 
 // ======================
 // ERROR HANDLING

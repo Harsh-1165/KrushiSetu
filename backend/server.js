@@ -98,6 +98,29 @@ const startServer = async () => {
   }
 
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"))
+
+  // ======================
+  // SCHEDULED JOBS
+  // ======================
+  const cron = require("node-cron")
+  const agmarknetService = require("./services/agmarknetService")
+
+  // Schedule daily data ingestion at 12:00 AM (Midnight)
+  cron.schedule("0 0 * * *", async () => {
+    logger.info("Running daily Agmarknet data ingestion...")
+    try {
+      await agmarknetService.fetchAndStorePrices(2000)
+    } catch (error) {
+      logger.error("Daily ingestion failed:", error)
+    }
+  })
+
+  // Optional: Run on startup if configured
+  if (process.env.SEED_DATABASE === "true") {
+    logger.info("Seeding database with initial data...")
+    agmarknetService.fetchAndStorePrices(500).catch(err => logger.error("Startup seeding failed:", err))
+  }
+
   process.on("SIGINT", () => gracefulShutdown("SIGINT"))
 }
 

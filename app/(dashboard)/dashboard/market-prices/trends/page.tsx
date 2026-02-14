@@ -14,6 +14,10 @@ import {
   BarChart3,
   LineChart as LineChartIcon,
   Info,
+  Bell,
+  Cpu,
+  ArrowRight,
+  Share2
 } from "lucide-react"
 import {
   LineChart,
@@ -27,13 +31,17 @@ import {
   Area,
   AreaChart,
   ReferenceLine,
+  BarChart,
+  Bar
 } from "recharts"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -42,17 +50,27 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
   Tooltip as UITooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/components/ui/use-toast"
 
 import {
   priceApi,
-  type PriceTrend,
-  type PriceStats,
+  alertApi,
   COMMON_CROPS,
   INDIAN_STATES,
   formatPrice,
@@ -60,71 +78,27 @@ import {
   getPriceChangeColor,
 } from "@/lib/market-api"
 
-type Period = "24h" | "7d" | "30d" | "90d" | "1y"
-
-interface TrendData {
-  crop: string
-  variety: string
-  period: string
-  startDate: string
-  endDate: string
-  trends: PriceTrend[]
-  statistics: PriceStats & { priceChange: number; trend: "up" | "down" | "stable" }
-}
-
-function TrendSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="pt-4">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-8 w-32" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-[400px] w-full" />
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
-  if (!active || !payload || !payload.length) return null
-
-  return (
-    <div className="bg-background border rounded-lg shadow-lg p-3">
-      <p className="text-sm font-medium mb-2">{label}</p>
-      {payload.map((entry, index) => (
-        <p key={index} className="text-sm" style={{ color: entry.color }}>
-          {entry.name}: {formatPrice(entry.value)}
-        </p>
-      ))}
-    </div>
-  )
-}
-
-const Loading = () => null
+type Period = "7d" | "30d" | "90d" | "1y"
 
 export default function PriceTrendsPage() {
+  const { user } = useAuth()
+  const { toast } = useToast()
   const searchParams = useSearchParams()
   const initialCrop = searchParams.get("crop") || "Rice"
-  
+
   const [crop, setCrop] = useState(initialCrop)
-  const [state, setState] = useState("")
+  const [state, setState] = useState("all")
   const [period, setPeriod] = useState<Period>("7d")
   const [chartType, setChartType] = useState<"line" | "area">("area")
-  const [trendData, setTrendData] = useState<TrendData | null>(null)
+  const [trendData, setTrendData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+
+  // Alert State
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
+  const [alertTargetPrice, setAlertTargetPrice] = useState("")
+  const [alertCondition, setAlertCondition] = useState("above")
+  const [alertSaving, setAlertSaving] = useState(false)
 
   const fetchTrends = useCallback(async (showRefresh = false) => {
     try {
@@ -133,143 +107,241 @@ export default function PriceTrendsPage() {
 
       const response = await priceApi.getTrends({
         crop,
-        state: state || undefined,
+        state: state === "all" ? undefined : state,
         period,
       })
 
-      setTrendData(response.data)
+      setTrendData(response)
     } catch (error) {
-      console.log("[v0] Error fetching trends:", error)
-      // Generate mock data for demonstration
-      const mockTrends = generateMockTrendData(crop, period)
-      setTrendData(mockTrends)
+      console.error("Error fetching trends:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load market trends"
+      })
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [crop, state, period])
+  }, [crop, state, period, toast])
 
   useEffect(() => {
     fetchTrends()
   }, [fetchTrends])
 
-  const handleExportCSV = () => {
-    if (!trendData?.trends) return
+  const handleCreateAlert = async () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "Please login to set price alerts"
+      })
+      return
+    }
+    if (!alertTargetPrice) {
+      toast({
+        variant: "destructive",
+        title: "Invalid input",
+        description: "Please enter a target price"
+      })
+      return
+    }
 
-    const headers = ["Date", "Min Price", "Max Price", "Modal Price", "Total Arrival"]
-    const rows = trendData.trends.map(t => [
-      formatDate(t.date),
-      t.avgMinPrice.toFixed(2),
-      t.avgMaxPrice.toFixed(2),
-      t.avgModalPrice.toFixed(2),
-      t.totalArrival.toString()
+    setAlertSaving(true)
+    try {
+      await alertApi.create({
+        crop,
+        state: state === "all" ? undefined : state,
+        targetPrice: Number(alertTargetPrice),
+        condition: alertCondition as "above" | "below",
+        priceType: "modal"
+      })
+      toast({
+        title: "Success",
+        description: "Price alert set successfully!"
+      })
+      setIsAlertOpen(false)
+      setAlertTargetPrice("")
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.message || "Failed to set alert"
+      })
+    } finally {
+      setAlertSaving(false)
+    }
+  }
+
+  const handleExportCSV = () => {
+    if (!trendData?.data) return
+
+    const headers = ["Date", "Min Price", "Max Price", "Modal Price", "Arrival"]
+    const rows = trendData.data.map((t: any) => [
+      t.date,
+      t.min,
+      t.max,
+      t.modal,
+      t.arrival
     ])
 
-    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n")
+    const csvContent = [headers.join(","), ...rows.map((r: any[]) => r.join(","))].join("\n")
     const blob = new Blob([csvContent], { type: "text/csv" })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `${crop}-price-trends-${period}.csv`
+    a.download = `${crop}-trends-${period}.csv`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     window.URL.revokeObjectURL(url)
   }
 
-  const chartData = trendData?.trends.map(t => ({
-    date: new Date(t.date).toLocaleDateString("en-IN", { 
-      day: "numeric", 
-      month: "short",
-      ...(period === "1y" || period === "90d" ? { year: "2-digit" } : {})
-    }),
-    minPrice: t.avgMinPrice,
-    maxPrice: t.avgMaxPrice,
-    modalPrice: t.avgModalPrice,
-    arrival: t.totalArrival,
-  })) || []
-
-  const avgPrice = trendData?.statistics?.avgPrice || 
-    (chartData.length > 0 ? chartData.reduce((acc, d) => acc + d.modalPrice, 0) / chartData.length : 0)
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard/market-prices">
-              <ArrowLeft className="h-4 w-4" />
+    <div className="space-y-8 pb-10 bg-slate-950 min-h-screen p-6">
+      {/* Header & Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-slate-400 mb-1">
+            <Link href="/dashboard/market-prices" className="hover:text-green-400 transition-colors flex items-center gap-1">
+              <ArrowLeft className="h-4 w-4" /> Back to Market
             </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Price Trends</h1>
-            <p className="text-muted-foreground">
-              Analyze historical price movements and patterns
-            </p>
           </div>
+          <h1 className="text-3xl font-bold tracking-tight text-white bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-600">
+            Market Intelligence
+          </h1>
+          <p className="text-slate-400">
+            Real-time price trends, AI insights, and predictive analysis for {crop}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => fetchTrends(true)} disabled={refreshing}>
-            <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
-            Refresh
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!trendData}>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Dialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-slate-700 bg-slate-800 text-green-400 hover:bg-slate-700 hover:text-green-300">
+                <Bell className="h-4 w-4 mr-2" />
+                Set Alert
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-slate-900 border-slate-800 text-white">
+              <DialogHeader>
+                <DialogTitle>Set Price Alert for {crop}</DialogTitle>
+                <DialogDescription className="text-slate-400">
+                  Get notified when market prices reach your target.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Condition</Label>
+                  <Select value={alertCondition} onValueChange={setAlertCondition}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="above">Price goes above</SelectItem>
+                      <SelectItem value="below">Price drops below</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right text-slate-300">Target (₹)</Label>
+                  <Input
+                    type="number"
+                    value={alertTargetPrice}
+                    onChange={(e) => setAlertTargetPrice(e.target.value)}
+                    className="col-span-3 bg-slate-800 border-slate-700 text-white"
+                    placeholder="e.g. 2500"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAlertOpen(false)} className="border-slate-700 text-slate-300 hover:bg-slate-800">Cancel</Button>
+                <Button onClick={handleCreateAlert} disabled={alertSaving} className="bg-green-600 hover:bg-green-700">
+                  {alertSaving ? "Saving..." : "Create Alert"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Button variant="outline" onClick={handleExportCSV} disabled={!trendData} className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700">
             <Download className="h-4 w-4 mr-2" />
-            Export CSV
+            Export
+          </Button>
+
+          <Button onClick={() => fetchTrends(true)} disabled={refreshing} className="bg-green-600 hover:bg-green-700 text-white">
+            <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
+            Refresh Data
           </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-col md:flex-row gap-4">
+      <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-sm shadow-md">
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+          <div className="md:col-span-3">
+            <Label className="text-xs text-slate-400 mb-1.5 block">Select Crop</Label>
             <Select value={crop} onValueChange={setCrop}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full bg-slate-900 border-slate-700 text-white">
                 <SelectValue placeholder="Select Crop" />
               </SelectTrigger>
-              <SelectContent>
-                {COMMON_CROPS.slice(0, 30).map((c) => (
+              <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                {COMMON_CROPS.map((c) => (
                   <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
 
+          <div className="md:col-span-3">
+            <Label className="text-xs text-slate-400 mb-1.5 block">Market State</Label>
             <Select value={state} onValueChange={setState}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="All States" />
+              <SelectTrigger className="w-full bg-slate-900 border-slate-700 text-white">
+                <SelectValue placeholder="All India" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All States</SelectItem>
+              <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                <SelectItem value="all">All India</SelectItem>
                 {INDIAN_STATES.map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
 
-            <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)} className="flex-1">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="24h">24H</TabsTrigger>
-                <TabsTrigger value="7d">7D</TabsTrigger>
-                <TabsTrigger value="30d">30D</TabsTrigger>
-                <TabsTrigger value="90d">90D</TabsTrigger>
-                <TabsTrigger value="1y">1Y</TabsTrigger>
-              </TabsList>
-            </Tabs>
+          <div className="md:col-span-4">
+            <Label className="text-xs text-slate-400 mb-1.5 block">Time Range</Label>
+            <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700">
+              {(["7d", "30d", "90d", "1y"] as Period[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={cn(
+                    "flex-1 text-sm font-medium py-1.5 rounded-md transition-all",
+                    period === p
+                      ? "bg-slate-700 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  {p.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            <div className="flex items-center gap-1 border rounded-md p-1">
+          <div className="md:col-span-2 flex justify-end">
+            <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700">
               <Button
-                variant={chartType === "line" ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
-                onClick={() => setChartType("line")}
+                className={cn("h-8 px-2 text-slate-400 hover:text-white hover:bg-slate-700", chartType === "area" && "bg-slate-700 text-white shadow-sm")}
+                onClick={() => setChartType("area")}
               >
                 <LineChartIcon className="h-4 w-4" />
               </Button>
               <Button
-                variant={chartType === "area" ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
-                onClick={() => setChartType("area")}
+                className={cn("h-8 px-2 text-slate-400 hover:text-white hover:bg-slate-700", chartType === "line" && "bg-slate-700 text-white shadow-sm")}
+                onClick={() => setChartType("line")}
               >
                 <BarChart3 className="h-4 w-4" />
               </Button>
@@ -278,313 +350,220 @@ export default function PriceTrendsPage() {
         </CardContent>
       </Card>
 
+      {/* Main Content */}
       {loading ? (
         <TrendSkeleton />
+      ) : !trendData ? (
+        <div className="text-center py-20 bg-slate-50 rounded-xl border border-dashed text-muted-foreground">
+          No data available. Try adjusting filters.
+        </div>
       ) : (
-        <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Average Price</p>
-                    <p className="text-2xl font-bold">{formatPrice(avgPrice)}</p>
-                  </div>
-                  <TooltipProvider>
-                    <UITooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Average modal price over the selected period
-                      </TooltipContent>
-                    </UITooltip>
-                  </TooltipProvider>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="space-y-6">
 
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Price Change</p>
-                    <div className={cn("flex items-center gap-1", getPriceChangeColor(trendData?.statistics?.priceChange || 0))}>
-                      {(trendData?.statistics?.priceChange || 0) > 0 ? (
-                        <TrendingUp className="h-5 w-5" />
-                      ) : (trendData?.statistics?.priceChange || 0) < 0 ? (
-                        <TrendingDown className="h-5 w-5" />
-                      ) : (
-                        <Minus className="h-5 w-5" />
-                      )}
-                      <span className="text-2xl font-bold">
-                        {Math.abs(trendData?.statistics?.priceChange || 0).toFixed(2)}%
-                      </span>
-                    </div>
+          {/* AI Insight Panel */}
+          <Card className="border-indigo-100 bg-gradient-to-r from-indigo-50 to-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-3 opacity-10">
+              <Cpu className="h-24 w-24 text-indigo-600" />
+            </div>
+            <CardContent className="p-6 relative z-10">
+              <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="bg-indigo-100 text-indigo-700 border-indigo-200 gap-1 px-3 py-1">
+                      <Cpu className="h-3 w-3" /> AI Market Insight
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">Confidence: {trendData.aiInsight?.confidence}%</span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Price Range</p>
-                  <p className="text-lg font-semibold">
-                    {formatPrice(trendData?.statistics?.minPrice || Math.min(...chartData.map(d => d.minPrice)))} - {formatPrice(trendData?.statistics?.maxPrice || Math.max(...chartData.map(d => d.maxPrice)))}
+                  <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                    {trendData.aiInsight?.summary}
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    Based on analyzing {trendData.data.length} data points from {state === "all" ? "pan-India" : state} mandis.
                   </p>
                 </div>
+
+                <div className={cn(
+                  "px-6 py-4 rounded-xl border-l-4 flex flex-col items-center min-w-[140px]",
+                  trendData.aiInsight?.advice === "sell" ? "bg-green-100 border-green-500" :
+                    trendData.aiInsight?.advice === "wait" ? "bg-amber-100 border-amber-500" :
+                      "bg-slate-100 border-slate-400"
+                )}>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Recommendation</span>
+                  <span className={cn(
+                    "text-2xl font-black",
+                    trendData.aiInsight?.advice === "sell" ? "text-green-700" :
+                      trendData.aiInsight?.advice === "wait" ? "text-amber-700" :
+                        "text-slate-700"
+                  )}>
+                    {trendData.aiInsight?.advice.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-xl border border-slate-800 bg-slate-900 shadow-sm space-y-1">
+              <p className="text-sm font-medium text-slate-400">Average Price</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-bold text-white">{formatPrice(trendData.averagePrice || 0)}</h3>
+                <span className="text-xs text-slate-500">/ quintal</span>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-xl border border-slate-800 bg-slate-900 shadow-sm space-y-1">
+              <p className="text-sm font-medium text-slate-400">Price Change</p>
+              <div className={cn("flex items-center gap-2", getPriceChangeColor(trendData.priceChange || 0))}>
+                {(trendData.priceChange || 0) > 0 ? <TrendingUp className="h-5 w-5" /> :
+                  (trendData.priceChange || 0) < 0 ? <TrendingDown className="h-5 w-5" /> :
+                    <Minus className="h-5 w-5" />}
+                <h3 className="text-2xl font-bold">{Math.abs(trendData.priceChange || 0)}%</h3>
+              </div>
+              <p className="text-xs text-slate-500">vs start of period</p>
+            </div>
+
+            <div className="p-5 rounded-xl border border-slate-800 bg-slate-900 shadow-sm space-y-1">
+              <p className="text-sm font-medium text-slate-400">Price Range</p>
+              <div className="flex flex-col">
+                <h3 className="text-xl font-bold text-white">
+                  {formatPrice(trendData.priceRange?.min || 0)} - {formatPrice(trendData.priceRange?.max || 0)}
+                </h3>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-slate-600 rounded-full" style={{ width: '60%' }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-xl border border-slate-800 bg-slate-900 shadow-sm space-y-1">
+              <p className="text-sm font-medium text-slate-400">Total Arrival</p>
+              <h3 className="text-2xl font-bold text-white">{((trendData.totalArrival || 0) / 1000).toFixed(1)}K</h3>
+              <p className="text-xs text-slate-500">Quintals recorded</p>
+            </div>
+          </div>
+
+          {/* Main Chart Section */}
+          <div className="grid lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 border-slate-800 bg-slate-900 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-white">Price Movement</CardTitle>
+                <CardDescription className="text-slate-400">Daily Min, Max, and Modal prices</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendData.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorModal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 12, fill: '#94a3b8' }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val) => formatDate(val).split(',')[0]}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: '#94a3b8' }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val) => `₹${val}`}
+                      />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '8px', border: '1px solid #1e293b', backgroundColor: '#0f172a', color: '#fff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
+                      />
+                      <Legend iconType="circle" />
+
+                      <Area
+                        type="monotone"
+                        dataKey="modal"
+                        name="Modal Price"
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#colorModal)"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="max"
+                        name="Max Price"
+                        stroke="#ef4444"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        fill="none"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="min"
+                        name="Min Price"
+                        stroke="#3b82f6"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        fill="none"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Arrival</p>
-                  <p className="text-2xl font-bold">
-                    {((trendData?.statistics?.totalArrival || chartData.reduce((acc, d) => acc + d.arrival, 0)) / 1000).toFixed(1)}K
-                  </p>
-                  <p className="text-xs text-muted-foreground">quintals</p>
+            <Card className="lg:col-span-1 border-slate-800 bg-slate-900 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-white">Market Arrivals</CardTitle>
+                <CardDescription className="text-slate-400">Daily volume in Quintals</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={trendData.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 12, fill: '#94a3b8' }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val) => formatDate(val).split(',')[0].substring(0, 3)}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: '#94a3b8' }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+                      />
+                      <Tooltip
+                        cursor={{ fill: '#1e293b' }}
+                        contentStyle={{ borderRadius: '8px', border: '1px solid #1e293b', backgroundColor: '#0f172a', color: '#fff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
+                      />
+                      <Bar dataKey="arrival" name="Arrival (Q)" fill="#475569" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
           </div>
-
-          {/* Price Chart */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{crop} Price Trends</CardTitle>
-                  <CardDescription>
-                    {state ? `${state} - ` : "All India - "}
-                    {period === "24h" ? "Last 24 Hours" :
-                     period === "7d" ? "Last 7 Days" :
-                     period === "30d" ? "Last 30 Days" :
-                     period === "90d" ? "Last 90 Days" : "Last 1 Year"}
-                  </CardDescription>
-                </div>
-                <Badge variant={
-                  (trendData?.statistics?.trend || "stable") === "up" ? "default" :
-                  (trendData?.statistics?.trend || "stable") === "down" ? "destructive" : "secondary"
-                }>
-                  {(trendData?.statistics?.trend || "stable") === "up" ? "Uptrend" :
-                   (trendData?.statistics?.trend || "stable") === "down" ? "Downtrend" : "Stable"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  {chartType === "area" ? (
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="colorModal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorMin" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorMax" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(0, 84%, 60%)" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="hsl(0, 84%, 60%)" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `₹${value}`}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <ReferenceLine y={avgPrice} stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" label="Avg" />
-                      <Area
-                        type="monotone"
-                        dataKey="minPrice"
-                        name="Min Price"
-                        stroke="hsl(142, 76%, 36%)"
-                        fill="url(#colorMin)"
-                        strokeWidth={2}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="modalPrice"
-                        name="Modal Price"
-                        stroke="hsl(var(--primary))"
-                        fill="url(#colorModal)"
-                        strokeWidth={2}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="maxPrice"
-                        name="Max Price"
-                        stroke="hsl(0, 84%, 60%)"
-                        fill="url(#colorMax)"
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  ) : (
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `₹${value}`}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <ReferenceLine y={avgPrice} stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" />
-                      <Line
-                        type="monotone"
-                        dataKey="minPrice"
-                        name="Min Price"
-                        stroke="hsl(142, 76%, 36%)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="modalPrice"
-                        name="Modal Price"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="maxPrice"
-                        name="Max Price"
-                        stroke="hsl(0, 84%, 60%)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  )}
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Arrival Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Market Arrivals</CardTitle>
-              <CardDescription>Total quantity arriving at mandis</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorArrival" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fontSize: 12 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value.toLocaleString()} quintals`, "Arrival"]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="arrival"
-                      name="Arrival"
-                      stroke="hsl(var(--chart-2))"
-                      fill="url(#colorArrival)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </>
+        </div>
       )}
     </div>
   )
 }
 
-// Generate mock data for demonstration
-function generateMockTrendData(crop: string, period: Period): TrendData {
-  const days = period === "24h" ? 24 : period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 365
-  const basePrice = Math.random() * 2000 + 1500
-  const trends: PriceTrend[] = []
-
-  for (let i = days; i >= 0; i--) {
-    const date = new Date()
-    if (period === "24h") {
-      date.setHours(date.getHours() - i)
-    } else {
-      date.setDate(date.getDate() - i)
-    }
-
-    const variance = (Math.random() - 0.5) * 200
-    const modalPrice = basePrice + variance + (i * (Math.random() - 0.4) * 5)
-    
-    trends.push({
-      date: date.toISOString(),
-      avgMinPrice: modalPrice * 0.9,
-      avgMaxPrice: modalPrice * 1.1,
-      avgModalPrice: modalPrice,
-      totalArrival: Math.floor(Math.random() * 5000) + 1000,
-      priceCount: Math.floor(Math.random() * 50) + 10,
-      highestPrice: modalPrice * 1.15,
-      lowestPrice: modalPrice * 0.85,
-    })
-  }
-
-  const firstPrice = trends[0].avgModalPrice
-  const lastPrice = trends[trends.length - 1].avgModalPrice
-  const priceChange = ((lastPrice - firstPrice) / firstPrice) * 100
-
-  return {
-    crop,
-    variety: "All varieties",
-    period,
-    startDate: trends[0].date,
-    endDate: trends[trends.length - 1].date,
-    trends,
-    statistics: {
-      avgMinPrice: trends.reduce((acc, t) => acc + t.avgMinPrice, 0) / trends.length,
-      avgMaxPrice: trends.reduce((acc, t) => acc + t.avgMaxPrice, 0) / trends.length,
-      avgModalPrice: trends.reduce((acc, t) => acc + t.avgModalPrice, 0) / trends.length,
-      minPrice: Math.min(...trends.map(t => t.lowestPrice)),
-      maxPrice: Math.max(...trends.map(t => t.highestPrice)),
-      totalArrival: trends.reduce((acc, t) => acc + t.totalArrival, 0),
-      priceCount: trends.reduce((acc, t) => acc + t.priceCount, 0),
-      marketCount: Math.floor(Math.random() * 50) + 20,
-      priceChange,
-      trend: priceChange > 2 ? "up" : priceChange < -2 ? "down" : "stable",
-    },
-  }
+function TrendSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse p-6 bg-slate-950 min-h-screen">
+      <Skeleton className="h-48 w-full rounded-xl bg-slate-800" />
+      <div className="grid grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-xl bg-slate-800" />
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-6">
+        <Skeleton className="col-span-2 h-[400px] rounded-xl bg-slate-800" />
+        <Skeleton className="col-span-1 h-[400px] rounded-xl bg-slate-800" />
+      </div>
+    </div>
+  )
 }

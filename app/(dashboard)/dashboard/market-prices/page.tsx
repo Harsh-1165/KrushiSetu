@@ -101,6 +101,11 @@ function PriceRow({ price }: { price: MandiPrice }) {
         {price.variety && (
           <div className="text-xs text-muted-foreground">{price.variety}</div>
         )}
+        {price.source && price.source.includes("Agmarknet") && (
+          <Badge variant="outline" className="mt-1 text-[10px] h-5 border-blue-200 text-blue-700 bg-blue-50">
+            GOVT DATA
+          </Badge>
+        )}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
@@ -199,6 +204,11 @@ function PriceCard({ price }: { price: MandiPrice }) {
             {price.variety && (
               <p className="text-sm text-muted-foreground">{price.variety}</p>
             )}
+            {price.source && price.source.includes("Agmarknet") && (
+              <Badge variant="outline" className="mt-1 text-[10px] h-5 border-blue-200 text-blue-700 bg-blue-50">
+                GOVT DATA
+              </Badge>
+            )}
           </div>
           <Badge className={cn(getPriceChangeBgColor(price.priceChange24h), "gap-1")}>
             {trend === "up" ? (
@@ -293,11 +303,15 @@ function CardSkeleton() {
 // Main Component
 function MarketPricesContent() {
   const searchParams = useSearchParams()
-  
+
   const [prices, setPrices] = useState<MandiPrice[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+
+  // Real-Time Mode
+  const [isRealTime, setIsRealTime] = useState(false)
+  const [locationLoading, setLocationLoading] = useState(false)
 
   // Filters
   const [search, setSearch] = useState(searchParams.get("search") || "")
@@ -317,48 +331,104 @@ function MarketPricesContent() {
     pricesDown: 0,
   })
 
+  // Detect Location for Real-Time
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser")
+      return
+    }
+
+    setLocationLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords
+          // Simple reverse geocoding via free API (BigDataCloud)
+          const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          )
+          const data = await res.json()
+          if (data.principalSubdivision) {
+            setState(data.principalSubdivision)
+            setIsRealTime(true)
+          }
+        } catch (error) {
+          console.error("Location error:", error)
+        } finally {
+          setLocationLoading(false)
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error)
+        setLocationLoading(false)
+      }
+    )
+  }
+
   const fetchPrices = useCallback(async (showRefresh = false) => {
     try {
       if (showRefresh) setRefreshing(true)
       else setLoading(true)
 
-      const params: Record<string, string | number> = {
-        page,
-        limit: 20,
-        sortBy,
-        sortOrder,
+      let data: MandiPrice[] = []
+      let total = 0
+
+      if (isRealTime) {
+        // Fetch Real-Time Govt Data
+        const response = await priceApi.getRealTimePrices({
+          state,
+          commodity: crop,
+          limit: 100
+        })
+        data = response.data
+        total = response.count
+        setPagination({
+          page: 1, limit: 100, total, pages: 1, hasMore: false
+        })
+      } else {
+        // Fetch Internal GreenTrace Data
+        const params: Record<string, string | number> = {
+          page,
+          limit: 20,
+          sortBy,
+          sortOrder,
+        }
+
+        if (crop) params.crop = crop
+        if (state) params.state = state
+        if (minPrice > 0) params.minPrice = minPrice
+        if (maxPrice < 10000) params.maxPrice = maxPrice
+
+        const response = await priceApi.getAll(params)
+        data = response.data
+        setPagination(response.pagination)
       }
 
-      if (crop) params.crop = crop
-      if (state) params.state = state
-      if (minPrice > 0) params.minPrice = minPrice
-      if (maxPrice < 10000) params.maxPrice = maxPrice
-
-      const response = await priceApi.getAll(params)
-      
-      setPrices(response.data)
-      setPagination(response.pagination)
+      setPrices(data)
 
       // Calculate stats
-      if (response.data.length > 0) {
-        const totalUp = response.data.filter(p => p.priceChange24h > 0).length
-        const totalDown = response.data.filter(p => p.priceChange24h < 0).length
-        const avgPrice = response.data.reduce((acc, p) => acc + p.modalPrice, 0) / response.data.length
+      if (data.length > 0) {
+        const totalUp = data.filter(p => (p.priceChange24h || 0) > 0).length
+        const totalDown = data.filter(p => (p.priceChange24h || 0) < 0).length
+        const avgPrice = data.reduce((acc, p) => acc + p.modalPrice, 0) / data.length
 
         setStats({
-          totalPrices: response.pagination.total,
+          totalPrices: total,
           avgPrice,
           pricesUp: totalUp,
           pricesDown: totalDown,
         })
+      } else {
+        setStats({ totalPrices: 0, avgPrice: 0, pricesUp: 0, pricesDown: 0 })
       }
+
     } catch (error) {
       console.log("[v0] Error fetching prices:", error)
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [page, crop, state, sortBy, sortOrder, minPrice, maxPrice])
+  }, [page, crop, state, sortBy, sortOrder, minPrice, maxPrice, isRealTime])
 
   useEffect(() => {
     fetchPrices()
@@ -382,12 +452,12 @@ function MarketPricesContent() {
   // Filter by search locally
   const filteredPrices = search
     ? prices.filter(
-        (p) =>
-          p.crop.toLowerCase().includes(search.toLowerCase()) ||
-          p.variety?.toLowerCase().includes(search.toLowerCase()) ||
-          p.state.toLowerCase().includes(search.toLowerCase()) ||
-          p.district.toLowerCase().includes(search.toLowerCase())
-      )
+      (p) =>
+        p.crop.toLowerCase().includes(search.toLowerCase()) ||
+        p.variety?.toLowerCase().includes(search.toLowerCase()) ||
+        p.state.toLowerCase().includes(search.toLowerCase()) ||
+        p.district.toLowerCase().includes(search.toLowerCase())
+    )
     : prices
 
   const handleExport = async () => {
@@ -411,12 +481,27 @@ function MarketPricesContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Market Prices</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            Market Prices
+            {isRealTime && <Badge className="bg-blue-600 hover:bg-blue-700">Live Govt Data</Badge>}
+          </h1>
           <p className="text-muted-foreground">
-            Real-time agricultural commodity prices from mandis across India
+            {isRealTime
+              ? "Real-time mandi prices sourced directly from Agmarknet (Govt of India)"
+              : "Real-time agricultural commodity prices from mandis across India"}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant={isRealTime ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsRealTime(!isRealTime)}
+            className={cn(isRealTime && "bg-blue-600 hover:bg-blue-700")}
+          >
+            <Building className="h-4 w-4 mr-2" />
+            {isRealTime ? "Show GreenTrace Data" : "Show Govt. Real-Time"}
+          </Button>
+
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
             Refresh
@@ -514,15 +599,26 @@ function MarketPricesContent() {
       <Card>
         <CardContent className="pt-4">
           <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by crop, variety, location..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            {/* Search & Location */}
+            <div className="relative flex-1 flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by crop, variety, location..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleUseLocation}
+                disabled={locationLoading}
+                title="Use My Location"
+              >
+                <MapPin className={cn("h-4 w-4", locationLoading && "animate-pulse text-blue-600")} />
+              </Button>
             </div>
 
             {/* Filters */}
@@ -763,7 +859,7 @@ function MarketPricesContent() {
             Showing {filteredPrices.length} prices
           </p>
         </div>
-        
+
         {loading ? (
           <div className="grid gap-4">
             {[...Array(6)].map((_, i) => (

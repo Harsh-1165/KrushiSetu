@@ -1,0 +1,372 @@
+{
+    "Ahmedabad": {
+        "lat": 23.0225,
+        "lng": 72.5714,
+        "state": "Gujarat"
+    },
+    "Amreli": {
+        "lat": 21.6032,
+        "lng": 71.2221,
+        "state": "Gujarat"
+    },
+    "Anand": {
+        "lat": 22.5645,
+        "lng": 72.9289,
+        "state": "Gujarat"
+    },
+    "Banaskantha": {
+        "lat": 24.3879,
+        "lng": 71.7226,
+        "state": "Gujarat"
+    },
+    "Bharuch": {
+        "lat": 21.7051,
+        "lng": 72.9959,
+        "state": "Gujarat"
+    },
+    "Bhavnagar": {
+        "lat": 21.7645,
+        "lng": 72.1519,
+        "state": "Gujarat"
+    },
+    "Botad": {
+        "lat": 22.1706,
+        "lng": 71.6664,
+        "state": "Gujarat"
+    },
+    "Chhota Udaipur": {
+        "lat": 22.3060,
+        "lng": 74.0152,
+        "state": "Gujarat"
+    },
+    "Dahod": {
+        "lat": 22.8306,
+        "lng": 74.2625,
+        "state": "Gujarat"
+    },
+    "Dang": {
+        "lat": 20.8253,
+        "lng": 73.7088,
+        "state": "Gujarat"
+    },
+    "Devbhoomi Dwarka": {
+        "lat": 22.2442,
+        "lng": 68.9685,
+        "state": "Gujarat"
+    },
+    "Gandhinagar": {
+        "lat": 23.2156,
+        "lng": 72.6369,
+        "state": "Gujarat"
+    },
+    "Gir Somnath": {
+        "lat": 20.9048,
+        "lng": 70.3694,
+        "state": "Gujarat"
+    },
+    "Jamnagar": {
+        "lat": 22.4707,
+        "lng": 70.0577,
+        "state": "Gujarat"
+    },
+    "Junagadh": {
+        "lat": 21.5222,
+        "lng": 70.4579,
+        "state": "Gujarat"
+    },
+    "Kheda": {
+        "lat": 22.7562,
+        "lng": 72.6958,
+        "state": "Gujarat"
+    },
+    "Kutch": {
+        "lat": 23.2420,
+        "lng": 69.6669,
+        "state": "Gujarat"
+    },
+    "Mahisagar": {
+        "lat": 23.1678,
+        "lng": 73.5855,
+        "state": "Gujarat"
+    },
+    "Mehsana": {
+        "lat": 23.6067,
+        "lng": 72.3925,
+        "state": "Gujarat"
+    },
+    "Morbi": {
+        "lat": 22.8120,
+        "lng": 70.8359,
+        "state": "Gujarat"
+    },
+    "Narmada": {
+        "lat": 21.8906,
+        "lng": 73.5126,
+        "state": "Gujarat"
+    },
+    "Navsari": {
+        "lat": 20.9467,
+        "lng": 72.9520,
+        "state": "Gujarat"
+    },
+    "Panchmahal": {
+        "lat": 22.7761,
+        "lng": 73.6146,
+        "state": "Gujarat"
+    },
+    "Patan": {
+        "lat": 23.8493,
+        "lng": 72.1266,
+        "state": "Gujarat"
+    },
+    "Porbandar": {
+        "lat": 21.6417,
+        "lng": 69.6293,
+        "state": "Gujarat"
+    },
+    "Rajkot": {
+        "lat": 22.3039,
+        "lng": 70.8022,
+        "state": "Gujarat"
+    },
+    "Sabarkantha": {
+        "lat": 23.7000,
+        "lng": 73.0000,
+        "state": "Gujarat"
+    },
+    "Surat": {
+        "lat": 21.1702,
+        "lng": 72.8311,
+        "state": "Gujarat"
+    },
+    "Surendranagar": {
+        "lat": 22.7215,
+        "lng": 71.6811,
+        "state": "Gujarat"
+    },
+    "Tapi": {
+        "lat": 21.4026,
+        "lng": 73.5355,
+        "state": "Gujarat"
+    },
+    "Vadodara": {
+        "lat": 22.3072,
+        "lng": 73.1812,
+        "state": "Gujarat"
+    },
+    "Valsad": {
+        "lat": 20.5992,
+        "lng": 72.9342,
+        "state": "Gujarat"
+    },
+    "Pune": {
+        "lat": 18.5204,
+        "lng": 73.8567,
+        "state": "Maharashtra"
+    },
+    "Mumbai": {
+        "lat": 19.0760,
+        "lng": 72.8777,
+        "state": "Maharashtra"
+    },
+    "Nashik": {
+        "lat": 19.9975,
+        "lng": 73.7898,
+        "state": "Maharashtra"
+    },
+    "Nagpur": {
+        "lat": 21.1458,
+        "lng": 79.0882,
+        "state": "Maharashtra"
+    },
+    "Aurangabad": {
+        "lat": 19.8762,
+        "lng": 75.3433,
+        "state": "Maharashtra"
+    },
+    "Ahmednagar": {
+        "lat": 19.0952,
+        "lng": 74.7496,
+        "state": "Maharashtra"
+    },
+    "Solapur": {
+        "lat": 17.6599,
+        "lng": 75.9064,
+        "state": "Maharashtra"
+    },
+    "Jalgaon": {
+        "lat": 21.0077,
+        "lng": 75.5626,
+        "state": "Maharashtra"
+    },
+    "Kolhapur": {
+        "lat": 16.7050,
+        "lng": 74.2433,
+        "state": "Maharashtra"
+    },
+    "Satara": {
+        "lat": 17.6805,
+        "lng": 74.0183,
+        "state": "Maharashtra"
+    },
+    "Indore": {
+        "lat": 22.7196,
+        "lng": 75.8577,
+        "state": "Madhya Pradesh"
+    },
+    "Bhopal": {
+        "lat": 23.2599,
+        "lng": 77.4126,
+        "state": "Madhya Pradesh"
+    },
+    "Ujjain": {
+        "lat": 23.1765,
+        "lng": 75.7818,
+        "state": "Madhya Pradesh"
+    },
+    "Jabalpur": {
+        "lat": 23.1815,
+        "lng": 79.9864,
+        "state": "Madhya Pradesh"
+    },
+    "Gwalior": {
+        "lat": 26.2183,
+        "lng": 78.1828,
+        "state": "Madhya Pradesh"
+    },
+    "Jaipur": {
+        "lat": 26.9124,
+        "lng": 75.7873,
+        "state": "Rajasthan"
+    },
+    "Jodhpur": {
+        "lat": 26.2389,
+        "lng": 73.0243,
+        "state": "Rajasthan"
+    },
+    "Kota": {
+        "lat": 25.2138,
+        "lng": 75.8648,
+        "state": "Rajasthan"
+    },
+    "Udaipur": {
+        "lat": 24.5854,
+        "lng": 73.7125,
+        "state": "Rajasthan"
+    },
+    "Ajmer": {
+        "lat": 26.4499,
+        "lng": 74.6399,
+        "state": "Rajasthan"
+    },
+    "Lucknow": {
+        "lat": 26.8467,
+        "lng": 80.9462,
+        "state": "Uttar Pradesh"
+    },
+    "Kanpur": {
+        "lat": 26.4499,
+        "lng": 80.3319,
+        "state": "Uttar Pradesh"
+    },
+    "Varanasi": {
+        "lat": 25.3176,
+        "lng": 82.9739,
+        "state": "Uttar Pradesh"
+    },
+    "Agra": {
+        "lat": 27.1767,
+        "lng": 78.0081,
+        "state": "Uttar Pradesh"
+    },
+    "Meerut": {
+        "lat": 28.9845,
+        "lng": 77.7064,
+        "state": "Uttar Pradesh"
+    },
+    "Bangalore": {
+        "lat": 12.9716,
+        "lng": 77.5946,
+        "state": "Karnataka"
+    },
+    "Mysore": {
+        "lat": 12.2958,
+        "lng": 76.6394,
+        "state": "Karnataka"
+    },
+    "Hubli": {
+        "lat": 15.3647,
+        "lng": 75.1240,
+        "state": "Karnataka"
+    },
+    "Belgaum": {
+        "lat": 15.8497,
+        "lng": 74.4977,
+        "state": "Karnataka"
+    },
+    "Chennai": {
+        "lat": 13.0827,
+        "lng": 80.2707,
+        "state": "Tamil Nadu"
+    },
+    "Coimbatore": {
+        "lat": 11.0168,
+        "lng": 76.9558,
+        "state": "Tamil Nadu"
+    },
+    "Madurai": {
+        "lat": 9.9252,
+        "lng": 78.1198,
+        "state": "Tamil Nadu"
+    },
+    "Salem": {
+        "lat": 11.6643,
+        "lng": 78.1460,
+        "state": "Tamil Nadu"
+    },
+    "Hyderabad": {
+        "lat": 17.3850,
+        "lng": 78.4867,
+        "state": "Telangana"
+    },
+    "Warangal": {
+        "lat": 17.9689,
+        "lng": 79.5941,
+        "state": "Telangana"
+    },
+    "Nizamabad": {
+        "lat": 18.6725,
+        "lng": 78.0941,
+        "state": "Telangana"
+    },
+    "Kolkata": {
+        "lat": 22.5726,
+        "lng": 88.3639,
+        "state": "West Bengal"
+    },
+    "Howrah": {
+        "lat": 22.5958,
+        "lng": 88.2636,
+        "state": "West Bengal"
+    },
+    "Darjeeling": {
+        "lat": 27.0360,
+        "lng": 88.2627,
+        "state": "West Bengal"
+    },
+    "Patna": {
+        "lat": 25.5941,
+        "lng": 85.1376,
+        "state": "Bihar"
+    },
+    "Gaya": {
+        "lat": 24.7914,
+        "lng": 85.0002,
+        "state": "Bihar"
+    },
+    "Muzaffarpur": {
+        "lat": 26.1197,
+        "lng": 85.3910,
+        "state": "Bihar"
+    }
+}

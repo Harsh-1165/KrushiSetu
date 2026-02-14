@@ -130,11 +130,11 @@ function FacilityBadge({ available, icon: Icon, label }: { available: boolean; i
 function MandiCard({ mandi, userLocation, onSelect }: { mandi: Mandi; userLocation: UserLocation | null; onSelect: () => void }) {
   const distance = userLocation && mandi.location?.coordinates
     ? calculateDistance(
-        userLocation.lat,
-        userLocation.lng,
-        mandi.location.coordinates[1],
-        mandi.location.coordinates[0]
-      )
+      userLocation.lat,
+      userLocation.lng,
+      mandi.location.coordinates[1],
+      mandi.location.coordinates[0]
+    )
     : null
 
   const isOpen = checkIfOpen(mandi)
@@ -146,14 +146,14 @@ function MandiCard({ mandi, userLocation, onSelect }: { mandi: Mandi; userLocati
           <div className={cn(
             "p-3 rounded-lg",
             mandi.type === "APMC" ? "bg-green-100 dark:bg-green-900/30" :
-            mandi.type === "Private" ? "bg-blue-100 dark:bg-blue-900/30" :
-            "bg-gray-100 dark:bg-gray-900/30"
+              mandi.type === "Private" ? "bg-blue-100 dark:bg-blue-900/30" :
+                "bg-gray-100 dark:bg-gray-900/30"
           )}>
             <Building2 className={cn(
               "h-6 w-6",
               mandi.type === "APMC" ? "text-green-600" :
-              mandi.type === "Private" ? "text-blue-600" :
-              "text-gray-600"
+                mandi.type === "Private" ? "text-blue-600" :
+                  "text-gray-600"
             )} />
           </div>
           <div className="flex-1 min-w-0">
@@ -166,6 +166,11 @@ function MandiCard({ mandi, userLocation, onSelect }: { mandi: Mandi; userLocati
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1">
+                {mandi.source === "GOVT_AGMARKNET" && (
+                  <Badge variant="outline" className="text-[10px] h-5 border-blue-200 text-blue-700 bg-blue-50">
+                    GOVT DATA
+                  </Badge>
+                )}
                 <Badge variant={isOpen ? "default" : "secondary"}>
                   {isOpen ? "Open" : "Closed"}
                 </Badge>
@@ -435,10 +440,10 @@ export default function MandiFinderPage() {
       else setLoading(true)
 
       const params: Record<string, string | number> = {
-        limit: 50,
+        limit: 2000,
       }
 
-      if (state) params.state = state
+      if (state && state !== "all") params.state = state
       if (search) params.search = search
       if (userLocation) {
         params.lat = userLocation.lat
@@ -446,13 +451,14 @@ export default function MandiFinderPage() {
         params.radius = radius
       }
 
-      const response = await mandiApi.getAll(params)
+      const response = await mandiApi.getList(params)
+      setMandis(response.data)
       setMandis(response.data)
     } catch (error) {
       console.log("[v0] Error fetching mandis:", error)
-      // Generate mock data
-      const mockMandis = generateMockMandis(state, userLocation)
-      setMandis(mockMandis)
+      // DO NOT fallback to mock data to force real API debugging
+      // setMandis([]) 
+      // alert("Failed to fetch real-time mandi data. Please ensure backend server is restarted.")
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -492,24 +498,24 @@ export default function MandiFinderPage() {
 
   const filteredMandis = search
     ? mandis.filter(
-        (m) =>
-          m.name.toLowerCase().includes(search.toLowerCase()) ||
-          m.district.toLowerCase().includes(search.toLowerCase()) ||
-          m.state.toLowerCase().includes(search.toLowerCase())
-      )
+      (m) =>
+        m.name.toLowerCase().includes(search.toLowerCase()) ||
+        m.district.toLowerCase().includes(search.toLowerCase()) ||
+        m.state.toLowerCase().includes(search.toLowerCase())
+    )
     : mandis
 
   // Sort by distance if user location is available
   const sortedMandis = userLocation
     ? [...filteredMandis].sort((a, b) => {
-        const distA = a.location?.coordinates
-          ? calculateDistance(userLocation.lat, userLocation.lng, a.location.coordinates[1], a.location.coordinates[0])
-          : Infinity
-        const distB = b.location?.coordinates
-          ? calculateDistance(userLocation.lat, userLocation.lng, b.location.coordinates[1], b.location.coordinates[0])
-          : Infinity
-        return distA - distB
-      })
+      const distA = a.location?.coordinates
+        ? calculateDistance(userLocation.lat, userLocation.lng, a.location.coordinates[1], a.location.coordinates[0])
+        : Infinity
+      const distB = b.location?.coordinates
+        ? calculateDistance(userLocation.lat, userLocation.lng, b.location.coordinates[1], b.location.coordinates[0])
+        : Infinity
+      return distA - distB
+    })
     : filteredMandis
 
   return (

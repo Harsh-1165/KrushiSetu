@@ -110,7 +110,7 @@ export interface MandiPrice {
   priceChange30d: number
   previousPrice?: number
   priceDate: string
-  source: string
+  source?: string
   isActive: boolean
   trendIndicator?: "up" | "down" | "stable"
   createdAt: string
@@ -260,17 +260,22 @@ export const priceApi = {
     variety?: string
     mandi?: string
     state?: string
-    period?: "24h" | "7d" | "30d" | "90d" | "1y"
+    period?: "7d" | "30d" | "90d" | "365d"
   }): Promise<{
-    data: {
-      crop: string
-      variety: string
-      period: string
-      startDate: string
-      endDate: string
-      trends: PriceTrend[]
-      statistics: PriceStats
-    }
+    success: boolean
+    averagePrice: number
+    priceChange: number
+    trend: string
+    priceRange: { min: number; max: number }
+    totalArrival: number
+    aiInsight: { summary: string; advice: string; confidence: number }
+    data: Array<{
+      date: string
+      min: number
+      max: number
+      modal: number
+      arrival: number
+    }>
   }> => {
     const searchParams = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
@@ -279,6 +284,29 @@ export const priceApi = {
       }
     })
     const response = await fetchWithAuth(`/mandi/trends?${searchParams.toString()}`)
+    return response
+  },
+
+
+  // Get real-time prices from Agmarknet
+  getRealTimePrices: async (params: {
+    state?: string
+    district?: string
+    commodity?: string
+    limit?: number
+  }): Promise<{
+    success: boolean
+    source: string
+    count: number
+    data: Array<MandiPrice>
+  }> => {
+    const searchParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        searchParams.append(key, String(value))
+      }
+    })
+    const response = await fetchWithAuth(`/mandi/real-time?${searchParams.toString()}`)
     return response
   },
 
@@ -296,6 +324,7 @@ export const priceApi = {
       location: string
       predictionDays: number
       predictions: PricePrediction[]
+      history?: MandiPrice[] // Added history field
       confidence: {
         level: "high" | "medium" | "low"
         score: number
@@ -316,33 +345,45 @@ export const priceApi = {
     return response
   },
 
-  // Compare prices across mandis
+  // Real-Time Comparison
   compare: async (params: {
-    crop: string
-    mandis?: string
+    commodity: string
     states?: string
     period?: "today" | "7d" | "30d"
   }): Promise<{
+    success: boolean
+    message?: string
     data: {
       crop: string
+      variety: string
       period: string
+      dateRange: {
+        startDate: string
+        endDate: string
+      }
       comparison: Array<{
-        mandi: Mandi
-        avgPrice: number
-        minPrice: number
-        maxPrice: number
+        mandi: string
+        state: string
+        district: string
+        avgMinPrice: number
+        avgMaxPrice: number
+        avgModalPrice: number
         totalArrival: number
-        priceChange: number
+        priceCount: number
+        latestDate: string
       }>
+      statistics: any
+      recommendation: any
     }
   }> => {
     const searchParams = new URLSearchParams()
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== "") {
-        searchParams.append(key, String(value))
-      }
-    })
-    const response = await fetchWithAuth(`/mandi/compare?${searchParams.toString()}`)
+    if (params.commodity) searchParams.append("commodity", params.commodity)
+    if (params.states) searchParams.append("states", params.states)
+    if (params.period) searchParams.append("period", params.period)
+
+    const url = `/mandi/compare?${searchParams.toString()}`
+    console.log("[DEBUG] Fetching Compare URL:", url)
+    const response = await fetchWithAuth(url)
     return response
   },
 
@@ -695,9 +736,9 @@ export function calculateDistance(
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2)
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) *
+    Math.sin(dLng / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
 }

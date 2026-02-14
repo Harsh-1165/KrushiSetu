@@ -19,17 +19,48 @@ const cropAdvisorySchema = new mongoose.Schema({
         enum: ['Seedling', 'Vegetative', 'Flowering', 'Fruiting', 'Harvest'],
         required: true
     },
-    description: {
+    location: {
         type: String,
         required: true
     },
-    location: {
-        type: String, // Or object if more detailed
+    // Environmental Context
+    soilType: {
+        type: String,
+        enum: ['Red', 'Black', 'Alluvial', 'Clay', 'Sandy', 'Loam', 'Other'],
+        default: 'Other'
+    },
+    irrigationType: {
+        type: String,
+        enum: ['Rainfed', 'Drip', 'Sprinkler', 'Canal', 'Borewell', 'Other'],
+        default: 'Other'
+    },
+    weatherContext: {
+        temperature: Number,
+        humidity: Number,
+        rainfall: Number,
+        forecast: String
+    },
+    description: {
+        type: String,
+        required: true
     },
     status: {
         type: String,
         enum: ['pending', 'answered'],
         default: 'pending'
+    },
+    // AI Analysis & Risk
+
+    aiRiskAssessment: {
+        riskLevel: {
+            type: String,
+            enum: ['Low', 'Medium', 'High'],
+            default: 'Low'
+        },
+        fungalRisk: Boolean,
+        droughtRisk: Boolean,
+        next7DaysForecast: String,
+        weatherAlert: String
     },
     // Expert Response
     expertDiagnosis: {
@@ -50,15 +81,29 @@ const cropAdvisorySchema = new mongoose.Schema({
     answeredAt: {
         type: Date
     },
-    // Mock AI Prediction
-    aiPrediction: {
-        disease: String,
-        confidence: Number,
-        description: String
+    // AI Analysis (Detailed)
+    aiAnalysis: {
+        disease: { type: String },
+        confidence: { type: Number }, // 0-100
+        severity: {
+            type: String,
+            enum: ['Low', 'Moderate', 'High', 'Critical', 'Unknown'],
+            default: 'Unknown'
+        },
+        description: { type: String },
+        treatment: [{ type: String }],
+        prevention: [{ type: String }],
+        analyzedAt: { type: Date, default: Date.now }
     },
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    // Feedback Tracking
+    reviewStatus: {
+        type: String,
+        enum: ['pending_review', 'reviewed'],
+        default: 'pending_review'
     }
 });
 

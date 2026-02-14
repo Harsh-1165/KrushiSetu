@@ -4,25 +4,30 @@
  * =================================================================
  * Complete file upload system for agricultural marketplace
  * Supports: Product images, Avatars, Documents, Article covers
- * Features: Validation, Compression, Local storage, Security
+ * Features: Validation, Compression, Cloudinary Storage, Security
  * =================================================================
  */
 
 const multer = require("multer")
 const sharp = require("sharp")
 const path = require("path")
-const fs = require("fs").promises
 const crypto = require("crypto")
+const cloudinary = require("cloudinary").v2
+const stream = require("stream")
 const AppError = require("../utils/AppError")
 
 // =================================================================
 // CONFIGURATION
 // =================================================================
 
-const config = {
-  // Local storage path (product images use Cloudinary via middleware/upload.js)
-  localUploadPath: process.env.UPLOAD_PATH || "uploads",
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
 
+const config = {
   // File size limits (in bytes)
   limits: {
     avatar: 2 * 1024 * 1024, // 2MB
@@ -82,17 +87,6 @@ const getExtensionFromMime = (mimetype) => {
     "application/pdf": ".pdf",
   }
   return mimeToExt[mimetype] || ".bin"
-}
-
-/**
- * Ensure upload directory exists
- */
-const ensureDir = async (dirPath) => {
-  try {
-    await fs.access(dirPath)
-  } catch {
-    await fs.mkdir(dirPath, { recursive: true })
-  }
 }
 
 /**
@@ -242,37 +236,49 @@ const generateThumbnail = async (buffer, options = {}) => {
 }
 
 // =================================================================
-// STORAGE HANDLERS
+// STORAGE HANDLERS (CLOUDINARY)
 // =================================================================
 
 /**
- * Upload file to local storage
+ * Upload file to Cloudinary
  */
-const uploadToLocal = async (buffer, relativePath) => {
-  const fullPath = path.join(config.localUploadPath, relativePath)
-  const dir = path.dirname(fullPath)
+const uploadToCloudinary = async (buffer, folder, filename) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: `greentrace/${folder}`,
+        public_id: path.parse(filename).name, // Remove extension as Cloudinary adds it
+        resource_type: "auto",
+      },
+      (error, result) => {
+        if (error) return reject(error)
+        resolve(result.secure_url)
+      },
+    )
 
-  await ensureDir(dir)
-  await fs.writeFile(fullPath, buffer)
-
-  // Return relative URL path
-  return `/uploads/${relativePath}`
+    const bufferStream = new stream.PassThrough()
+    bufferStream.end(buffer)
+    bufferStream.pipe(uploadStream)
+  })
 }
 
 /**
- * Delete file from local storage
+ * Delete file from Cloudinary
  */
-const deleteFromLocal = async (relativePath) => {
-  const fullPath = path.join(config.localUploadPath, relativePath)
+const deleteFromCloudinary = async (fileUrl) => {
+  if (!fileUrl) return
 
   try {
-    await fs.access(fullPath)
-    await fs.unlink(fullPath)
+    // Extract public_id from URL
+    // URL format: https://res.cloudinary.com/cloud_name/image/upload/v12345678/folder/filename.jpg
+    const parts = fileUrl.split("/")
+    const filenameWithExt = parts.pop()
+    const folderPath = parts.slice(parts.indexOf("greentrace")).join("/") // Start from greentrace folder
+    const publicId = `${folderPath}/${path.parse(filenameWithExt).name}`
+
+    await cloudinary.uploader.destroy(publicId)
   } catch (error) {
-    // File doesn't exist, ignore
-    if (error.code !== "ENOENT") {
-      throw error
-    }
+    console.error("Cloudinary deletion error:", error)
   }
 }
 
@@ -386,7 +392,6 @@ const processAvatarUpload = async (req, res, next) => {
   try {
     const userId = req.user.id
     const filename = generateFilename(req.file.originalname, "avatar-")
-    const key = `avatars/${userId}/${filename}`
 
     // Process and optimize image
     const processedBuffer = await processImage(req.file.buffer, {
@@ -394,13 +399,13 @@ const processAvatarUpload = async (req, res, next) => {
       fit: "cover",
     })
 
-    // Upload to local storage
-    const url = await uploadToLocal(processedBuffer, key)
+    // Upload to Cloudinary
+    const url = await uploadToCloudinary(processedBuffer, `avatars/${userId}`, filename)
 
     // Attach to request
     req.uploadedAvatar = {
       url,
-      key,
+      key: filename, // Use filename as key
       originalName: req.file.originalname,
       size: processedBuffer.length,
       mimetype: "image/jpeg",
@@ -429,26 +434,23 @@ const processProductImagesUpload = async (req, res, next) => {
       const filename = generateFilename(file.originalname, `product-${i}-`)
       const thumbnailFilename = filename.replace(/\.[^.]+$/, "-thumb.jpg")
 
-      const key = `products/${productId}/${filename}`
-      const thumbnailKey = `products/${productId}/thumbnails/${thumbnailFilename}`
-
       // Process main image
       const processedBuffer = await processImage(file.buffer, config.imageOptimization.productImage)
 
       // Generate thumbnail
       const thumbnailBuffer = await generateThumbnail(file.buffer, config.imageOptimization.productThumbnail)
 
-      // Upload to local storage
+      // Upload to Cloudinary
       const [url, thumbnailUrl] = await Promise.all([
-        uploadToLocal(processedBuffer, key),
-        uploadToLocal(thumbnailBuffer, thumbnailKey),
+        uploadToCloudinary(processedBuffer, `products/${productId}`, filename),
+        uploadToCloudinary(thumbnailBuffer, `products/${productId}`, thumbnailFilename),
       ])
 
       uploadedImages.push({
         url,
         thumbnailUrl,
-        key,
-        thumbnailKey,
+        key: filename,
+        thumbnailKey: thumbnailFilename,
         originalName: file.originalname,
         size: processedBuffer.length,
         isPrimary: i === 0,
@@ -478,7 +480,6 @@ const processDocumentUpload = async (req, res, next) => {
 
     for (const file of req.files) {
       const filename = generateFilename(file.originalname, `${docType}-`)
-      const key = `documents/${userId}/${docType}/${filename}`
 
       let buffer = file.buffer
       let mimetype = file.mimetype
@@ -493,12 +494,12 @@ const processDocumentUpload = async (req, res, next) => {
         mimetype = "image/jpeg"
       }
 
-      // Upload to local storage
-      const url = await uploadToLocal(buffer, key)
+      // Upload to Cloudinary (documents folder)
+      const url = await uploadToCloudinary(buffer, `documents/${userId}/${docType}`, filename)
 
       uploadedDocuments.push({
         url,
-        key,
+        key: filename,
         originalName: file.originalname,
         size: buffer.length,
         mimetype,
@@ -527,9 +528,6 @@ const processArticleCoverUpload = async (req, res, next) => {
     const filename = generateFilename(req.file.originalname, "cover-")
     const thumbnailFilename = filename.replace(/\.[^.]+$/, "-thumb.jpg")
 
-    const key = `articles/${articleId}/${filename}`
-    const thumbnailKey = `articles/${articleId}/${thumbnailFilename}`
-
     // Process cover image (16:9 aspect ratio)
     const processedBuffer = await processImage(req.file.buffer, {
       ...config.imageOptimization.articleCover,
@@ -539,17 +537,17 @@ const processArticleCoverUpload = async (req, res, next) => {
     // Generate thumbnail
     const thumbnailBuffer = await generateThumbnail(req.file.buffer, config.imageOptimization.articleThumbnail)
 
-    // Upload to local storage
+    // Upload to Cloudinary
     const [url, thumbnailUrl] = await Promise.all([
-      uploadToLocal(processedBuffer, key),
-      uploadToLocal(thumbnailBuffer, thumbnailKey),
+      uploadToCloudinary(processedBuffer, `articles/${articleId}`, filename),
+      uploadToCloudinary(thumbnailBuffer, `articles/${articleId}`, thumbnailFilename),
     ])
 
     req.uploadedCover = {
       url,
       thumbnailUrl,
-      key,
-      thumbnailKey,
+      key: filename,
+      thumbnailKey: thumbnailFilename,
       originalName: req.file.originalname,
       size: processedBuffer.length,
     }
@@ -571,7 +569,6 @@ const processAdvisoryImageUpload = async (req, res, next) => {
   try {
     const userId = req.user.id
     const filename = generateFilename(req.file.originalname, "advisory-")
-    const key = `advisory/${userId}/${filename}`
 
     // Process image
     const processedBuffer = await processImage(req.file.buffer, {
@@ -579,12 +576,12 @@ const processAdvisoryImageUpload = async (req, res, next) => {
       fit: "inside",
     })
 
-    // Upload to local storage
-    const url = await uploadToLocal(processedBuffer, key)
+    // Upload to Cloudinary
+    const url = await uploadToCloudinary(processedBuffer, `advisory/${userId}`, filename)
 
     req.uploadedFile = {
       url,
-      key,
+      key: filename,
       originalName: req.file.originalname,
       size: processedBuffer.length,
     }
@@ -600,16 +597,10 @@ const processAdvisoryImageUpload = async (req, res, next) => {
 // =================================================================
 
 /**
- * Delete file from storage
+ * Delete file from storage (Cloudinary)
  */
 const deleteFile = async (fileUrl) => {
-  if (!fileUrl) return
-  try {
-    const relativePath = fileUrl.replace("/uploads/", "")
-    await deleteFromLocal(relativePath)
-  } catch (error) {
-    console.error("File deletion error:", error)
-  }
+  await deleteFromCloudinary(fileUrl)
 }
 
 /**
@@ -627,7 +618,7 @@ const deleteAvatar = async (userId, avatarUrl) => {
 }
 
 /**
- * Delete product images (images can be URL strings or { url, thumbnailUrl } objects)
+ * Delete product images
  */
 const deleteProductImages = async (images) => {
   const urls = (images || []).flatMap((img) =>
@@ -636,140 +627,16 @@ const deleteProductImages = async (images) => {
   await deleteFiles(urls)
 }
 
-// =================================================================
-// ERROR HANDLING MIDDLEWARE
-// =================================================================
-
-/**
- * Multer error handler
- */
-const handleMulterError = (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    let message
-
-    switch (err.code) {
-      case "LIMIT_FILE_SIZE":
-        message = `File too large. Maximum size allowed is ${(config.limits.productImage / 1024 / 1024).toFixed(0)}MB`
-        break
-      case "LIMIT_FILE_COUNT":
-        message = "Too many files. Please reduce the number of files."
-        break
-      case "LIMIT_UNEXPECTED_FILE":
-        message = `Unexpected field: ${err.field}`
-        break
-      default:
-        message = "File upload error"
-    }
-
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: "UPLOAD_ERROR",
-        message,
-      },
-    })
-  }
-
-  next(err)
-}
-
-// =================================================================
-// COMBINED UPLOAD MIDDLEWARE CHAINS
-// =================================================================
-
-/**
- * Avatar upload chain
- */
-const uploadAvatar = [avatarUpload, handleMulterError, validateFileType(config.allowedTypes.image), processAvatarUpload]
-
-/**
- * Product images upload chain
- */
-const uploadProductImages = [
-  productImagesUpload,
-  handleMulterError,
-  validateFileType(config.allowedTypes.image),
-  validateTotalSize(config.limits.totalUpload),
-  processProductImagesUpload,
-]
-
-/**
- * Document upload chain
- */
-const uploadDocuments = [
-  documentUpload,
-  handleMulterError,
-  validateFileType(config.allowedTypes.document),
-  validateTotalSize(config.limits.totalUpload),
-  processDocumentUpload,
-]
-
-/**
- * Article cover upload chain
- */
-const uploadArticleCover = [
-  articleCoverUpload,
-  handleMulterError,
-  validateFileType(config.allowedTypes.image),
-  processArticleCoverUpload,
-]
-
-/**
- * Advisory image upload chain
- */
-const uploadAdvisoryImage = [
-  advisoryImageUpload,
-  handleMulterError,
-  validateFileType(config.allowedTypes.image),
-  processAdvisoryImageUpload,
-]
-
-/**
- * Mixed upload chain (for questions with images and documents)
- */
-const uploadMixed = [mixedUpload, handleMulterError, validateTotalSize(config.limits.totalUpload)]
-
-// =================================================================
-// EXPORTS
-// =================================================================
-
 module.exports = {
-  // Configuration
   config,
-
-  // Raw multer instances
-  avatarUpload,
-  productImagesUpload,
-  documentUpload,
-  articleCoverUpload,
-  advisoryImageUpload,
-  mixedUpload,
-
-  // Middleware chains (recommended)
-  uploadAvatar,
-  uploadProductImages,
-  uploadDocuments,
-  uploadArticleCover,
-  uploadAdvisoryImage,
-  uploadMixed,
-
-  // Processing functions
-  processImage,
-  generateThumbnail,
-
-  // Storage functions
-  uploadToLocal,
+  uploadAvatar: [avatarUpload, processAvatarUpload],
+  uploadProductImages: [productImagesUpload, processProductImagesUpload],
+  uploadDocuments: [documentUpload, processDocumentUpload],
+  uploadArticleCover: [articleCoverUpload, processArticleCoverUpload],
+  uploadAdvisoryImage: [advisoryImageUpload, processAdvisoryImageUpload],
+  uploadMixed: mixedUpload,
   deleteFile,
   deleteFiles,
   deleteAvatar,
   deleteProductImages,
-
-  // Validation middleware
-  validateFileType,
-  validateTotalSize,
-  handleMulterError,
-
-  // Utilities
-  generateFilename,
-  validateMagicBytes,
 }
