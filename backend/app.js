@@ -31,6 +31,8 @@ const expertRoutes = require("./routes/expert")
 const cartRoutes = require("./routes/cart")
 const articleRoutes = require("./routes/articles")
 const aiFeedbackRoutes = require("./routes/aiFeedback")
+const analyticsRoutes = require("./routes/analytics")
+const healthRoutes = require("./routes/health")
 
 // Initialize Express app
 const app = express()
@@ -69,8 +71,8 @@ app.use(corsErrorHandler)
 // ======================
 
 // Body parser - reading data from body into req.body
-app.use(express.json({ limit: "50mb" }))
-app.use(express.urlencoded({ extended: true, limit: "50mb" }))
+app.use(express.json({ limit: "10mb" }))
+app.use(express.urlencoded({ extended: true, limit: "10mb" }))
 
 // Cookie parser
 app.use(cookieParser())
@@ -134,6 +136,8 @@ app.use(morganLogger)
 // Apply general rate limiter to all requests
 app.use("/api", apiLimiter)
 
+
+
 // ======================
 // STATIC FILES
 // ======================
@@ -172,6 +176,8 @@ app.use("/api/v1/expert", expertRoutes)
 app.use("/api/v1/cart", cartRoutes)
 app.use("/api/v1/articles", articleRoutes)
 app.use("/api/v1/ai-feedback", aiFeedbackRoutes)
+app.use("/api/v1/analytics", analyticsRoutes)
+app.use("/api/v1/health", healthRoutes)
 
 // ======================
 // ERROR HANDLING

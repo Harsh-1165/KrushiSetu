@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 
 const navLinks = [
   { href: "/marketplace", label: "Marketplace" },
-  { href: "/advisory", label: "Crop Advisory" },
+  { href: "/dashboard/advisory", label: "Crop Advisory" },
   { href: "/dashboard/market-prices", label: "Mandi Prices" },
   { href: "/knowledge-hub", label: "Knowledge Hub" },
 ]

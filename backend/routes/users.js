@@ -664,15 +664,15 @@ router.put(
       throw new AppError("User not found", 404)
     }
 
-    // Update profile fields
+    // Update profile fields (supports both profile.* format and flat name/address/bio format)
     if (updates.profile) {
       Object.keys(updates.profile).forEach((key) => {
         if (key === "address" && updates.profile.address) {
+          if (!user.profile.address) user.profile.address = {}
           Object.keys(updates.profile.address).forEach((addrKey) => {
             user.profile.address[addrKey] = updates.profile.address[addrKey]
           })
         } else if (key === "location" && updates.profile.location) {
-          // Update geospatial location
           user.profile.location = {
             type: "Point",
             coordinates: [
@@ -686,17 +686,68 @@ router.put(
       })
     }
 
+    // Handle flat frontend format: name.first / name.last
+    if (updates.name) {
+      if (updates.name.first !== undefined) user.name = user.name || {}
+      if (updates.name.first !== undefined) user.name.first = updates.name.first
+      if (updates.name.last !== undefined) user.name.last = updates.name.last
+      // Also sync to profile fields for backwards compat
+      if (!user.profile) user.profile = {}
+      if (updates.name.first !== undefined) user.profile.firstName = updates.name.first
+      if (updates.name.last !== undefined) user.profile.lastName = updates.name.last
+    }
+
+    // Handle flat frontend format: bio
+    if (updates.bio !== undefined) {
+      user.bio = updates.bio
+      if (!user.profile) user.profile = {}
+      user.profile.bio = updates.bio
+    }
+
+    // Handle flat frontend format: address
+    if (updates.address) {
+      if (!user.address) user.address = {}
+      Object.keys(updates.address).forEach((addrKey) => {
+        user.address[addrKey] = updates.address[addrKey]
+      })
+      // Also sync to profile.address for backwards compat
+      if (!user.profile) user.profile = {}
+      if (!user.profile.address) user.profile.address = {}
+      Object.keys(updates.address).forEach((addrKey) => {
+        user.profile.address[addrKey] = updates.address[addrKey]
+      })
+    }
+
+    // Handle flat frontend format: preferences
+    if (updates.preferences) {
+      if (!user.preferences) user.preferences = {}
+      if (updates.preferences.language !== undefined) user.preferences.language = updates.preferences.language
+      if (updates.preferences.currency !== undefined) user.preferences.currency = updates.preferences.currency
+      if (updates.preferences.newsletter !== undefined) user.preferences.newsletter = updates.preferences.newsletter
+      if (updates.preferences.notifications) {
+        if (!user.preferences.notifications) user.preferences.notifications = {}
+        Object.assign(user.preferences.notifications, updates.preferences.notifications)
+        // Sync to notificationPreferences if it exists
+        if (user.notificationPreferences) {
+          Object.assign(user.notificationPreferences, updates.preferences.notifications)
+        }
+      }
+    }
+
     // Update role-specific profiles
     if (updates.farmerProfile && user.role === "farmer") {
+      if (!user.farmerProfile) user.farmerProfile = {}
       Object.assign(user.farmerProfile, updates.farmerProfile)
     }
 
     if (updates.expertProfile && user.role === "expert") {
+      if (!user.expertProfile) user.expertProfile = {}
       Object.assign(user.expertProfile, updates.expertProfile)
     }
 
-    // Update notification preferences
+    // Update notification preferences (legacy format)
     if (updates.notificationPreferences) {
+      if (!user.notificationPreferences) user.notificationPreferences = {}
       Object.assign(user.notificationPreferences, updates.notificationPreferences)
     }
 

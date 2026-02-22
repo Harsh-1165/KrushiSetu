@@ -314,7 +314,7 @@ export default function ExpertsDirectoryPage() {
       setHasMore(response.pagination.page < response.pagination.pages)
       setPage(pageNum)
     } catch (error) {
-      console.log("[v0] Error fetching experts:", error)
+      console.log("Error fetching experts:", error)
     }
   }
 
@@ -327,7 +327,7 @@ export default function ExpertsDirectoryPage() {
       })
       setTopExperts(response.experts)
     } catch (error) {
-      console.log("[v0] Error fetching top experts:", error)
+      console.log("Error fetching top experts:", error)
     }
   }
 

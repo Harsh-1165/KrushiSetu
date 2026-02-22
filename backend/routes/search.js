@@ -27,24 +27,7 @@ const Article = require("../models/Article")
 const User = require("../models/User")
 const SearchHistory = require("../models/SearchHistory")
 
-// Redis for caching (optional)
-let redis = null
-if (process.env.REDIS_URL) {
-  try {
-    const Redis = require("ioredis")
-    redis = new Redis(process.env.REDIS_URL)
-
-    // Check for connection errors without crashing
-    redis.on('error', (err) => {
-      console.error('Redis connection error:', err)
-      redis = null // Disable redis if connection fails
-    })
-  } catch (err) {
-    console.log("Redis not available, caching disabled")
-  }
-} else {
-  console.log("Redis URL not provided, caching disabled")
-}
+// Caching disabled — Redis removed
 
 // ===========================================
 // SEARCH INDEX SETUP (Run once during setup)
@@ -277,24 +260,8 @@ const cacheKey = (type, params) => {
   return `search:${type}:${JSON.stringify(params)}`
 }
 
-const getCachedResults = async (key) => {
-  if (!redis) return null
-  try {
-    const cached = await redis.get(key)
-    return cached ? JSON.parse(cached) : null
-  } catch (err) {
-    return null
-  }
-}
-
-const setCachedResults = async (key, data, ttl = 300) => {
-  if (!redis) return
-  try {
-    await redis.setex(key, ttl, JSON.stringify(data))
-  } catch (err) {
-    // Ignore cache errors
-  }
-}
+const getCachedResults = async (_key) => null
+const setCachedResults = async (_key, _data, _ttl) => { }
 
 // ===========================================
 // UNIFIED SEARCH ENDPOINT

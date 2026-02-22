@@ -1,5 +1,7 @@
 // Settings & Profile API utilities for GreenTrace
 
+import { fetchWithAuth } from "@/lib/api"
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
 
 // ============================================
@@ -169,16 +171,14 @@ export interface LoginActivity {
  * Get current user profile
  */
 export async function getUserProfile(): Promise<{ success: boolean; data: { user: UserProfile } }> {
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
-    credentials: "include",
-  })
-  
+  const response = await fetchWithAuth(`${API_BASE_URL}/auth/me`)
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to get user profile")
   }
-  
+
   return result
 }
 
@@ -189,66 +189,62 @@ export async function updateUserProfile(
   userId: string,
   data: ProfileUpdateData
 ): Promise<{ success: boolean; message: string; data: { user: UserProfile } }> {
-  const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
-    credentials: "include",
     body: JSON.stringify(data),
   })
-  
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to update profile")
   }
-  
+
   return result
 }
 
 /**
- * Upload avatar
+ * Upload avatar to Cloudinary via the /uploads/avatar endpoint.
+ * The backend identifies the user from the auth token — no userId needed.
  */
 export async function uploadAvatar(
-  userId: string,
   file: File
-): Promise<{ success: boolean; message: string; data: { avatarUrl: string } }> {
+): Promise<{ success: boolean; message: string; data: { avatar: { url: string; key?: string } } }> {
   const formData = new FormData()
   formData.append("avatar", file)
-  
-  const response = await fetch(`${API_BASE_URL}/users/${userId}/avatar`, {
-    method: "PUT",
-    credentials: "include",
+
+  const response = await fetchWithAuth(`${API_BASE_URL}/uploads/avatar`, {
+    method: "POST",
     body: formData,
   })
-  
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to upload avatar")
   }
-  
+
   return result
 }
 
 /**
- * Remove avatar
+ * Remove avatar via the /uploads/avatar endpoint.
+ * The backend identifies the user from the auth token — no userId needed.
  */
-export async function removeAvatar(
-  userId: string
-): Promise<{ success: boolean; message: string }> {
-  const response = await fetch(`${API_BASE_URL}/users/${userId}/avatar`, {
+export async function removeAvatar(): Promise<{ success: boolean; message: string }> {
+  const response = await fetchWithAuth(`${API_BASE_URL}/uploads/avatar`, {
     method: "DELETE",
-    credentials: "include",
   })
-  
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to remove avatar")
   }
-  
+
   return result
 }
 
@@ -258,21 +254,20 @@ export async function removeAvatar(
 export async function changePassword(
   data: ChangePasswordData
 ): Promise<{ success: boolean; message: string }> {
-  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/auth/change-password`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
-    credentials: "include",
     body: JSON.stringify(data),
   })
-  
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to change password")
   }
-  
+
   return result
 }
 
@@ -283,13 +278,13 @@ export async function getSessions(): Promise<{ success: boolean; data: { session
   const response = await fetch(`${API_BASE_URL}/auth/sessions`, {
     credentials: "include",
   })
-  
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to get sessions")
   }
-  
+
   return result
 }
 
@@ -303,13 +298,13 @@ export async function revokeSession(
     method: "DELETE",
     credentials: "include",
   })
-  
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to revoke session")
   }
-  
+
   return result
 }
 
@@ -325,13 +320,13 @@ export async function logoutAllDevices(): Promise<{ success: boolean; message: s
     credentials: "include",
     body: JSON.stringify({ logoutAll: true }),
   })
-  
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to logout from all devices")
   }
-  
+
   return result
 }
 
@@ -342,13 +337,13 @@ export async function getLoginActivity(): Promise<{ success: boolean; data: { ac
   const response = await fetch(`${API_BASE_URL}/auth/me`, {
     credentials: "include",
   })
-  
+
   const result = await response.json()
-  
+
   if (!response.ok) {
     throw new Error(result.message || "Failed to get login activity")
   }
-  
+
   // Extract activity from user data
   return {
     success: true,
@@ -383,44 +378,44 @@ export function checkPasswordStrength(password: string): {
 } {
   const feedback: string[] = []
   let score = 0
-  
+
   if (password.length >= 8) {
     score += 1
   } else {
     feedback.push("At least 8 characters")
   }
-  
+
   if (password.length >= 12) {
     score += 1
   }
-  
+
   if (/[a-z]/.test(password)) {
     score += 1
   } else {
     feedback.push("Add lowercase letters")
   }
-  
+
   if (/[A-Z]/.test(password)) {
     score += 1
   } else {
     feedback.push("Add uppercase letters")
   }
-  
+
   if (/\d/.test(password)) {
     score += 1
   } else {
     feedback.push("Add numbers")
   }
-  
+
   if (/[@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     score += 1
   } else {
     feedback.push("Add special characters")
   }
-  
+
   let strength: "weak" | "fair" | "good" | "strong" = "weak"
   let color = "bg-red-500"
-  
+
   if (score >= 6) {
     strength = "strong"
     color = "bg-green-500"
@@ -431,7 +426,7 @@ export function checkPasswordStrength(password: string): {
     strength = "fair"
     color = "bg-yellow-500"
   }
-  
+
   return { score, feedback, strength, color }
 }
 
@@ -545,7 +540,7 @@ export function parseUserAgent(userAgent: string): {
   let browser = "Unknown Browser"
   let os = "Unknown OS"
   let device = "Desktop"
-  
+
   // Browser detection
   if (userAgent.includes("Chrome")) {
     browser = "Chrome"
@@ -558,7 +553,7 @@ export function parseUserAgent(userAgent: string): {
   } else if (userAgent.includes("Opera")) {
     browser = "Opera"
   }
-  
+
   // OS detection
   if (userAgent.includes("Windows")) {
     os = "Windows"
@@ -573,6 +568,6 @@ export function parseUserAgent(userAgent: string): {
     os = "iOS"
     device = userAgent.includes("iPad") ? "Tablet" : "Mobile"
   }
-  
+
   return { browser, os, device }
 }

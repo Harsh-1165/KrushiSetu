@@ -53,7 +53,7 @@ export function ArticleCard({
               <span>{article.readTime} min read</span>
               <span>·</span>
               <Eye className="h-3 w-3" />
-              <span>{article.views.toLocaleString()}</span>
+              <span>{(article.views || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>

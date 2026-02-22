@@ -227,7 +227,7 @@ export default function MyQuestionsPage() {
       setHasMore(response.pagination.page < response.pagination.pages)
       setPage(pageNum)
     } catch (error) {
-      console.log("[v0] Error fetching my questions:", error)
+      console.log("Error fetching my questions:", error)
       toast.error("Failed to load questions")
     }
   }

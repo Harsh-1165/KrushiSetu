@@ -91,7 +91,7 @@ export default function AskQuestionPage() {
 
   // Pre-fill location from user profile
   useState(() => {
-    if (user?.farmerProfile?.farmLocation) {
+    if ((user as any)?.farmerProfile?.farmLocation) {
       // Parse farm location if available
     }
   })
@@ -227,7 +227,7 @@ export default function AskQuestionPage() {
         router.push(`/dashboard/questions/${response.question._id}`)
       }, 2000)
     } catch (error) {
-      console.log("[v0] Error submitting question:", error)
+      console.log("Error submitting question:", error)
       toast.error(error instanceof Error ? error.message : "Failed to post question")
     } finally {
       setSubmitting(false)
@@ -350,8 +350,8 @@ export default function AskQuestionPage() {
                         setSubcategory("")
                       }}
                       className={`p-3 rounded-lg border text-center transition-all ${category === key
-                          ? "border-primary bg-primary/5 ring-2 ring-primary"
-                          : "border-border hover:border-primary/50"
+                        ? "border-primary bg-primary/5 ring-2 ring-primary"
+                        : "border-border hover:border-primary/50"
                         }`}
                     >
                       <Icon className={`h-6 w-6 mx-auto mb-2 ${category === key ? "text-primary" : "text-muted-foreground"}`} />
@@ -372,9 +372,9 @@ export default function AskQuestionPage() {
                       <SelectValue placeholder="Select subcategory" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ADVISORY_CATEGORIES[category].subcategories.map((sub) => (
+                      {ADVISORY_CATEGORIES[category].subcategories!.map((sub: string) => (
                         <SelectItem key={sub} value={sub}>
-                          {sub.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                          {sub.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())}
                         </SelectItem>
                       ))}
                     </SelectContent>

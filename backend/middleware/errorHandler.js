@@ -164,6 +164,7 @@ const errorHandler = (err, req, res, next) => {
     error: normalized.stack,
   })
 
+
   if (process.env.NODE_ENV === "development") {
     sendErrorDev(normalized, req, res)
   } else {

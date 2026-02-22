@@ -253,6 +253,10 @@ router.get(
  * @desc    Get price trends for specified period with mock fallback
  * @access  Public
  */
+// 5-minute in-memory cache for trends responses
+const trendsCache = new Map()
+const TRENDS_TTL = 5 * 60 * 1000 // 5 minutes
+
 router.get(
   "/trends",
   asyncHandler(async (req, res) => {
@@ -268,6 +272,15 @@ router.get(
 
     if (!crop) {
       throw new AppError("Crop name is required", 400)
+    }
+
+    // Check 5-min cache
+    const trendsCacheKey = `trends-${crop}-${state || 'all'}-${period}-${mandi || ''}`
+    if (trendsCache.has(trendsCacheKey)) {
+      const cached = trendsCache.get(trendsCacheKey)
+      if (Date.now() - cached.ts < TRENDS_TTL) {
+        return res.status(200).json({ ...cached.data, source: 'cache' })
+      }
     }
 
     // Calculate date range
@@ -376,58 +389,84 @@ router.get(
       insight = `🔍 Mixed signals observed. Price change: ${priceChange.toFixed(1)}%.`
     }
 
-    res.status(200).json({
+    // Sanitize — ensure no NaN values reach the frontend
+    const cleanTrends = finalTrends.map(t => ({
+      date: t.date,
+      min: Number(t.min) || 0,
+      modal: Number(t.modal) || 0,
+      max: Number(t.max) || 0,
+      arrival: Number(t.arrival) || 0
+    })).filter(t => t.modal > 0) // Drop rows with no price data
+
+    const responsePayload = {
       success: true,
+      source: trends.length >= 3 ? 'live' : 'simulated',
       averagePrice: Math.round(avgPrice),
       priceChange: Number(priceChange.toFixed(2)),
       trend: trendDirection,
       priceRange: {
-        min: Math.min(...finalTrends.map(t => t.min)),
-        max: Math.max(...finalTrends.map(t => t.max))
+        min: cleanTrends.length ? Math.min(...cleanTrends.map(t => t.min)) : 0,
+        max: cleanTrends.length ? Math.max(...cleanTrends.map(t => t.max)) : 0
       },
-      totalArrival: finalTrends.reduce((acc, t) => acc + t.arrival, 0),
+      totalArrival: cleanTrends.reduce((acc, t) => acc + t.arrival, 0),
       aiInsight: {
         summary: insight,
         advice: advice,
-        confidence: 85 // Mock confidence
+        confidence: trends.length >= 3 ? 90 : 72
       },
-      data: finalTrends
-    })
+      data: cleanTrends
+    }
+
+    // Cache the response
+    trendsCache.set(trendsCacheKey, { ts: Date.now(), data: responsePayload })
+
+    res.status(200).json(responsePayload)
   }),
 )
 
-// Helper: Generate Mock Trends
+// Helper: Generate Deterministic Mock Trends (NO Math.random — seeded by crop name)
+// Uses crop name as a numeric seed → same crop always produces same chart shape
 function generateMockTrends(crop, days, startDate) {
+  // --- Seed from crop name ---
+  let seed = 0
+  for (let c = 0; c < crop.length; c++) seed = (seed * 31 + crop.charCodeAt(c)) & 0xffff
+
+  // Seeded pseudo-random using LCG (deterministic)
+  function seededRand(n) {
+    seed = (seed * 1664525 + 1013904223) & 0xffffffff
+    return ((seed >>> 0) % 1000) / 1000 // 0..1 deterministic
+  }
+
+  // --- Base price by crop type ---
+  let basePrice = 2000
+  if (/cotton|mirch|jeera|turmeric/i.test(crop)) basePrice = 6000
+  else if (/wheat|rice|paddy|barley/i.test(crop)) basePrice = 2200
+  else if (/tomato|onion|potato|garlic/i.test(crop)) basePrice = 1500
+  else if (/soybean|mustard|groundnut/i.test(crop)) basePrice = 4500
+  else if (/maize|corn|bajra|jowar/i.test(crop)) basePrice = 1800
+
+  // --- Deterministic trend direction (seeded once per crop) ---
+  const trendFactor = (seededRand() - 0.5) * 8 // ±4 per day, consistent for crop
+
   const data = []
-  let basePrice = 2000 // Default
-
-  // Simple crop price logic
-  if (/cotton|mirch|jeera/i.test(crop)) basePrice = 6000
-  else if (/wheat|rice|paddy/i.test(crop)) basePrice = 2200
-  else if (/tomato|onion|potato/i.test(crop)) basePrice = 1500
-
   let currentPrice = basePrice
   let currentDate = new Date(startDate)
 
-  // Random trend factor
-  const trendFactor = (Math.random() - 0.5) * 10 // Positive or negative trend
-
   for (let i = 0; i < days; i++) {
-    // Add random daily fluctuation
-    const fluctuation = (Math.random() - 0.5) * (basePrice * 0.05)
+    // Sine wave seasonal component (±2%) + small day-index step
+    const seasonal = Math.sin((i / days) * Math.PI) * basePrice * 0.02
+    // Deterministic small daily variation using seeded LCG
+    const dailyVar = (seededRand() - 0.5) * basePrice * 0.03
 
-    // Apply trend
-    currentPrice += trendFactor + fluctuation
-
-    // Ensure reasonable bounds
-    currentPrice = Math.max(basePrice * 0.5, currentPrice)
+    currentPrice = Math.max(basePrice * 0.65, currentPrice + trendFactor + dailyVar + seasonal * 0.1)
 
     data.push({
       date: currentDate.toISOString().split('T')[0],
-      min: Math.round(currentPrice * 0.9),
+      min: Math.round(currentPrice * 0.90),
       modal: Math.round(currentPrice),
-      max: Math.round(currentPrice * 1.1),
-      arrival: Math.round(Math.random() * 500 + 100)
+      max: Math.round(currentPrice * 1.10),
+      // Deterministic arrival volume based on day + crop seed
+      arrival: Math.round(200 + seededRand() * 400)
     })
 
     currentDate.setDate(currentDate.getDate() + 1)
@@ -1188,6 +1227,32 @@ function calculateDistanceFromTarget(currentPrice, alert) {
 // Simple in-memory cache for Agmarknet data
 const mandiCache = new Map();
 
+// Last-good cache — survives TTL so we can serve stale data on API failure
+const mandiLastGood = new Map();
+
+/**
+ * Fetch with retry — retries `retries` times with a 1-second delay.
+ * Falls back to null on exhaustion so callers can use stale cache.
+ */
+async function fetchWithRetry(url, opts = {}, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, opts);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res;
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`[Agmarknet] Attempt ${attempt + 1} failed (${err.message}), retrying in 1s…`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        console.error(`[Agmarknet] All ${retries + 1} attempts failed for URL: ${url.substring(0, 80)}…`);
+        return null;
+      }
+    }
+  }
+}
+
+
 /**
  * @desc    Get Real-Time Mandi Prices (Agmarknet API)
  * @route   GET /api/mandi/real-time
@@ -1401,6 +1466,17 @@ router.delete(
 // Load district coordinates
 const districtCoordinates = require("../data/districtCoordinates.json");
 
+// ALL Indian states + UTs to fetch from Agmarknet when no state filter is applied
+const MAJOR_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand",
+  "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+  "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
+  "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura",
+  "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Delhi", "Jammu and Kashmir", "Puducherry", "Chandigarh"
+];
+
 /**
  * @desc    Get List of Active Mandis (Real-Time from Agmarknet)
  * @route   GET /api/mandi/list
@@ -1409,114 +1485,124 @@ const districtCoordinates = require("../data/districtCoordinates.json");
 router.get(
   "/list",
   asyncHandler(async (req, res) => {
-    const { state, district, limit = 2000 } = req.query; // High limit to get all mandis
-    const cacheKey = `mandi-list-${state || 'all'}-${district || 'all'}`;
+    const { state, district } = req.query;
+    const cacheKey = `mandi-list-v3-${state || 'all'}-${district || 'all'}`;
+    const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-    // 1. Check Cache (10 mins TTL)
+    // ── Helper: Haversine distance ─────────────────────────────────────
+    function haversineKm(userLat, userLng, mandiLat, mandiLng) {
+      const R = 6371;
+      const dLat = (mandiLat - userLat) * Math.PI / 180;
+      const dLon = (mandiLng - userLng) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(userLat * Math.PI / 180) * Math.cos(mandiLat * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // ── Helper: apply geo filter + sort on a mandi array ──────────────
+    function applyGeoFilter(mandiList, lat, lng, radius) {
+      const userLat = parseFloat(lat);
+      const userLng = parseFloat(lng);
+      const maxDist = parseFloat(radius);
+
+      return mandiList
+        .filter(mandi => {
+          if (!mandi.location?.coordinates) return false;
+          const dist = haversineKm(userLat, userLng, mandi.location.coordinates[1], mandi.location.coordinates[0]);
+          mandi.distanceKm = Math.round(dist * 10) / 10;
+          mandi.distance = dist; // kept for frontend calculateDistance compat
+          return dist <= maxDist;
+        })
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+    }
+
+    // ── 1. Serve from live cache if still fresh ────────────────────────
     if (mandiCache.has(cacheKey)) {
       const cached = mandiCache.get(cacheKey);
-      if (Date.now() - cached.timestamp < 10 * 60 * 1000) {
-        let cachedData = cached.data;
-
-        // Apply Geospatial Filter on Cached Data
+      if (Date.now() - cached.timestamp < CACHE_TTL) {
+        let cachedData = [...cached.data];
         const { lat, lng, radius } = req.query;
         if (lat && lng && radius) {
-          const userLat = parseFloat(lat);
-          const userLng = parseFloat(lng);
-          const maxDist = parseFloat(radius);
-
-          cachedData = cachedData.filter(mandi => {
-            if (!mandi.location || !mandi.location.coordinates) return false;
-            const mandiLng = mandi.location.coordinates[0];
-            const mandiLat = mandi.location.coordinates[1];
-
-            const R = 6371;
-            const dLat = (mandiLat - userLat) * Math.PI / 180;
-            const dLon = (mandiLng - userLng) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(userLat * Math.PI / 180) * Math.cos(mandiLat * Math.PI / 180) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const distance = R * c;
-
-            mandi.distance = distance;
-            return distance <= maxDist;
-          }).sort((a, b) => a.distance - b.distance);
+          cachedData = applyGeoFilter(cachedData, lat, lng, radius);
         }
-
-        return res.json({
-          success: true,
-          source: "cache",
-          count: cachedData.length,
-          data: cachedData
-        });
+        return res.json({ success: true, source: "cache", count: cachedData.length, data: cachedData });
       }
     }
 
-    // 2. Fetch from Agmarknet API
+    // ── 2. Fetch from Agmarknet API ────────────────────────────────────
     const apiKey = process.env.AGMARKET_API_KEY;
-    let apiUrl = `https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?api-key=${apiKey}&format=json&limit=${limit}`;
+    const BASE_URL = `https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?api-key=${apiKey}&format=json`;
 
-    // Infer state from coordinates if available and state not explicitly provided
-    let inferredState = null;
-    if ((!state || state === "all") && req.query.lat && req.query.lng) {
-      const userLat = parseFloat(req.query.lat);
-      const userLng = parseFloat(req.query.lng);
-      let minDistance = Infinity;
-      let nearestDistrict = null;
-
-      Object.entries(districtCoordinates).forEach(([name, coords]) => {
-        const dLat = (coords.lat - userLat) * Math.PI / 180;
-        const dLon = (coords.lng - userLng) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(userLat * Math.PI / 180) * Math.cos(coords.lat * Math.PI / 180) *
-          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = 6371 * c; // km
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestDistrict = { name, ...coords };
-        }
-      });
-
-      // If nearest calculated district is reasonably close (< 500km), assume user is in that state
-      if (nearestDistrict && minDistance < 500 && nearestDistrict.state) {
-        inferredState = nearestDistrict.state;
-        console.log(`[Agmarknet] Inferred State from location: ${inferredState} (Nearest: ${nearestDistrict.name}, Dist: ${minDistance.toFixed(0)}km)`);
+    /** Fetch one page of records for a state using retry helper */
+    async function fetchStateRecords(stateName, perStateLimit = 500) {
+      const url = `${BASE_URL}&limit=${perStateLimit}&filters[state]=${encodeURIComponent(stateName)}`;
+      try {
+        const resp = await fetchWithRetry(url, { signal: AbortSignal.timeout(8000) });
+        if (!resp) return [];
+        const json = await resp.json();
+        return Array.isArray(json.records) ? json.records : [];
+      } catch (e) {
+        console.warn(`[Agmarknet] fetchStateRecords failed for ${stateName}:`, e.message);
+        return [];
       }
     }
 
-    if (state && state !== "all") {
-      apiUrl += `&filters[state]=${encodeURIComponent(state)}`;
-    } else if (inferredState) {
-      apiUrl += `&filters[state]=${encodeURIComponent(inferredState)}`;
-    }
-
-    if (district) apiUrl += `&filters[district]=${encodeURIComponent(district)}`;
+    let allRecords = [];
 
     try {
-      const response = await fetch(apiUrl);
-      const data = await response.json();
+      if (state && state !== "all") {
+        // Single-state request — fetch with pagination (offset 0 + 500, offset 500 + 500)
+        const offsets = [0, 500, 1000];
+        const pages = await Promise.allSettled(
+          offsets.map(offset => {
+            let url = `${BASE_URL}&limit=500&offset=${offset}&filters[state]=${encodeURIComponent(state)}`;
+            if (district) url += `&filters[district]=${encodeURIComponent(district)}`;
+            return fetchWithRetry(url, { signal: AbortSignal.timeout(10000) })
+              .then(resp => resp ? resp.json() : { records: [] })
+              .then(json => Array.isArray(json.records) ? json.records : [])
+              .catch(() => []);
+          })
+        );
+        pages.forEach(r => { if (r.status === "fulfilled") allRecords.push(...r.value); });
+        console.log(`[Agmarknet] Single state "${state}": ${allRecords.length} raw records`);
 
-      if (!data.records) {
-        return res.json({ success: true, count: 0, data: [], message: "No mandi data found" });
+      } else {
+        // All states — parallel fetch
+        console.log("[Agmarknet] Fetching ALL Indian states in parallel…");
+        const results = await Promise.allSettled(
+          MAJOR_STATES.map(s => fetchStateRecords(s, 500))
+        );
+        results.forEach(r => { if (r.status === "fulfilled") allRecords.push(...r.value); });
+        console.log(`[Agmarknet] All-state total raw records: ${allRecords.length}`);
       }
 
-      // 3. Group by Mandi + District
+      // ── 3. If Agmarknet returned nothing, serve stale LastGood cache ─
+      if (allRecords.length === 0) {
+        if (mandiLastGood.has(cacheKey)) {
+          const lg = mandiLastGood.get(cacheKey);
+          let fallbackData = [...lg.data];
+          const { lat, lng, radius } = req.query;
+          if (lat && lng && radius) fallbackData = applyGeoFilter(fallbackData, lat, lng, radius);
+          console.warn(`[Agmarknet] No fresh data — serving LastGood cache for key: ${cacheKey}`);
+          return res.json({ success: true, source: "fallback", count: fallbackData.length, data: fallbackData });
+        }
+        return res.json({ success: true, source: "live", count: 0, data: [], message: "No mandi data found from Agmarknet" });
+      }
+
+      // ── 4. Deduplicate by mandi key (market + district + state) ──────
       const mandisMap = new Map();
 
-      data.records.forEach(record => {
+      allRecords.forEach(record => {
+        if (!record.market || !record.state) return; // skip malformed
         const mandiId = `${record.state}-${record.district}-${record.market}`.toLowerCase().replace(/\s+/g, '-');
 
         if (!mandisMap.has(mandiId)) {
-          // Find coordinates
-          // 1. Try exact district match
-          // 2. Try partial match
-          // 3. Fallback to state capital (simplified) or null
           let lat = null;
           let lng = null;
 
+          // Look up district coordinates
           const districtKey = Object.keys(districtCoordinates).find(k =>
             record.district.toLowerCase().includes(k.toLowerCase()) ||
             k.toLowerCase().includes(record.district.toLowerCase())
@@ -1526,27 +1612,31 @@ router.get(
             lat = districtCoordinates[districtKey].lat;
             lng = districtCoordinates[districtKey].lng;
 
-            // Jitter coordinates slightly so mandis in same district don't overlap perfectly
-            lat += (Math.random() - 0.5) * 0.05;
-            lng += (Math.random() - 0.5) * 0.05;
+            // ── DETERMINISTIC jitter — seeded by mandi name hash ──────
+            // Same mandi → same offset every time → stable map markers
+            const nameHash = mandiId.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) & 0xffff, 0);
+            lat += ((nameHash % 100) / 1000) - 0.05;   // ±0.05° consistent
+            lng += ((nameHash % 71) / 1000) - 0.035;
           }
 
           mandisMap.set(mandiId, {
             _id: mandiId,
             name: record.market,
-            type: "APMC", // Govt data mostly APMC
+            type: "APMC",
             state: record.state,
             district: record.district,
             location: (lat && lng) ? { type: "Point", coordinates: [lng, lat] } : undefined,
-            mainCommodities: [record.commodity],
+            mainCommodities: [record.commodity].filter(Boolean),
             todayPriceCount: 1,
+            operatingHours: { open: "06:00", close: "18:00" },
             updatedAt: record.arrival_date,
             isVerified: true,
-            source: "GOVT_AGMARKNET"
+            source: "GOVT_AGMARKNET",
           });
+
         } else {
           const existing = mandisMap.get(mandiId);
-          if (!existing.mainCommodities.includes(record.commodity)) {
+          if (record.commodity && !existing.mainCommodities.includes(record.commodity)) {
             existing.mainCommodities.push(record.commodity);
           }
           existing.todayPriceCount++;
@@ -1555,64 +1645,47 @@ router.get(
 
       let mandiList = Array.from(mandisMap.values());
 
-      // 4. Transform & Filter by Location (if provided)
+      // ── 5. Geospatial filter (when user location sent) ────────────────
       const { lat, lng, radius } = req.query;
+      const filteredList = (lat && lng && radius)
+        ? applyGeoFilter([...mandiList], lat, lng, radius)
+        : mandiList;
 
-      if (lat && lng && radius) {
-        const userLat = parseFloat(lat);
-        const userLng = parseFloat(lng);
-        const maxDist = parseFloat(radius);
-
-        mandiList = mandiList.filter(mandi => {
-          if (!mandi.location || !mandi.location.coordinates) return false;
-
-          const mandiLng = mandi.location.coordinates[0];
-          const mandiLat = mandi.location.coordinates[1];
-
-          // Haversine Formula
-          const R = 6371; // km
-          const dLat = (mandiLat - userLat) * Math.PI / 180;
-          const dLon = (mandiLng - userLng) * Math.PI / 180;
-          const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(userLat * Math.PI / 180) * Math.cos(mandiLat * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const distance = R * c;
-
-          mandi.distance = distance; // Attach distance for frontend sorting
-          return distance <= maxDist;
-        });
-
-        // Sort by distance
-        mandiList.sort((a, b) => a.distance - b.distance);
-      }
-
-      // 5. Update Cache (storing unfiltered list might be better, but for now cache the filtered if params exist?)
-      // Actually, we should cache the FULL list per State/District, and filter in memory after cache retrieval?
-      // For simplicity and to avoid cache explosion with lat/lng keys, let's cache the raw list (by state/district)
-      // and THEN filter.
-
-      mandiCache.set(cacheKey, {
-        timestamp: Date.now(),
-        data: Array.from(mandisMap.values()) // Cache the FULL list
-      });
+      // ── 6. Update caches ───────────────────────────────────────────────
+      const cachePayload = { timestamp: Date.now(), data: mandiList };
+      mandiCache.set(cacheKey, cachePayload);
+      mandiLastGood.set(cacheKey, cachePayload); // persist for fallback
 
       res.json({
         success: true,
-        source: "api",
-        count: mandiList.length,
-        data: mandiList
+        source: "live",
+        count: filteredList.length,
+        total: mandiList.length,
+        data: filteredList,
       });
 
     } catch (error) {
-      console.error("Agmarknet List Fetch Error:", error);
+      console.error("[Agmarknet] /list fatal error:", error);
+
+      // ── 7. Fatal error — try stale LastGood before returning 502 ───────
+      if (mandiLastGood.has(cacheKey)) {
+        const lg = mandiLastGood.get(cacheKey);
+        let fallbackData = [...lg.data];
+        const { lat, lng, radius } = req.query;
+        if (lat && lng && radius) fallbackData = applyGeoFilter(fallbackData, lat, lng, radius);
+        console.warn("[Agmarknet] Fatal error, serving LastGood stale cache.");
+        return res.json({ success: true, source: "fallback", count: fallbackData.length, data: fallbackData });
+      }
+
       res.status(502).json({ success: false, message: "Failed to fetch government mandi list" });
     }
   })
 );
 
+
 /**
  * @desc    Get Market Price Comparison (Real-Time)
+
  * @route   GET /api/mandi/compare
  * @access  Public
  */

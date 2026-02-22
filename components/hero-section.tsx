@@ -1,10 +1,16 @@
 "use client"
 
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { motion, useScroll, useTransform } from "framer-motion"
-import { ArrowRight, Play, CheckCircle2, TrendingUp, ShieldCheck } from "lucide-react"
+import { ArrowRight, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRef } from "react"
+
+const AiAdvisoryDemo = dynamic(
+  () => import("@/components/ai-advisory-demo").then(m => ({ default: m.AiAdvisoryDemo })),
+  { ssr: false, loading: () => <div className="h-[440px] rounded-2xl bg-zinc-900/50 border border-white/5 animate-pulse" /> }
+)
 
 export function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -82,90 +88,14 @@ export function HeroSection() {
           </motion.div>
         </div>
 
-        {/* 3D Dashboard Preview */}
+        {/* AI Advisory Demo — lazy loaded, no API calls */}
         <motion.div
-          style={{ y, rotateX: 5 }}
-          initial={{ opacity: 0, scale: 0.9, rotateX: 20 }}
-          animate={{ opacity: 1, scale: 1, rotateX: 10 }}
-          transition={{ duration: 1, delay: 0.4, type: "spring" }}
-          className="relative max-w-6xl mx-auto perspective-1000"
+          initial={{ opacity: 0, scale: 0.93, y: 40 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 1, delay: 0.4, type: "spring", bounce: 0.25 }}
+          className="relative"
         >
-          {/* Glow effect behind the dashboard */}
-          <div className="absolute inset-0 bg-gradient-to-t from-green-500/20 to-transparent blur-[100px] -z-10" />
-
-          {/* Glass Card Container */}
-          <div className="relative rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden group hover:border-green-500/30 transition-colors duration-500">
-            {/* Mock Dashboard UI Header */}
-            <div className="h-12 border-b border-white/5 bg-white/5 flex items-center px-4 gap-2">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                <div className="w-3 h-3 rounded-full bg-amber-500/50" />
-                <div className="w-3 h-3 rounded-full bg-green-500/50" />
-              </div>
-              <div className="ml-4 h-6 w-64 bg-white/5 rounded-full" />
-            </div>
-
-            {/* Mock Dashboard Body Image - Replace with real screenshot if available, using placeholder art for now */}
-            <div className="aspect-[16/9] relative bg-zinc-950/50 p-6 flex gap-6">
-              {/* Sidebar Mock */}
-              <div className="w-48 hidden md:flex flex-col gap-4 border-r border-white/5 pr-6">
-                <div className="h-8 w-24 bg-green-900/40 rounded mb-4" />
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className="h-4 w-full bg-white/5 rounded" />
-                ))}
-              </div>
-
-              {/* Main Content Mock */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Stat Cards */}
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-32 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/5 p-4 flex flex-col justify-between">
-                    <div className="w-8 h-8 rounded-lg bg-green-500/20" />
-                    <div className="w-1/2 h-4 bg-white/10 rounded" />
-                  </div>
-                ))}
-                {/* Chart Area */}
-                <div className="col-span-1 md:col-span-3 h-64 rounded-xl bg-white/5 border border-white/5 relative overflow-hidden flex items-end px-4 gap-2 pb-4">
-                  {[40, 60, 45, 70, 50, 80, 65, 90, 75, 55, 60, 85].map((h, i) => (
-                    <div key={i} style={{ height: `${h}%` }} className="flex-1 bg-gradient-to-t from-green-500/40 to-green-400/10 rounded-t-sm" />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Overlay Gradient for depth */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-          </div>
-
-          {/* Floating Feature Cards (Parallax) */}
-          <motion.div
-            animate={{ y: [0, -20, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -right-12 top-20 bg-black/80 backdrop-blur-md border border-green-500/30 p-4 rounded-xl shadow-2xl hidden lg:block"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-green-500/20 p-2 rounded-lg"><TrendingUp className="text-green-400 h-5 w-5" /></div>
-              <div>
-                <p className="text-xs text-zinc-400">Yield Increase</p>
-                <p className="text-sm font-bold text-white">+35% vs Last Year</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            animate={{ y: [0, 20, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            className="absolute -left-12 bottom-40 bg-black/80 backdrop-blur-md border border-amber-500/30 p-4 rounded-xl shadow-2xl hidden lg:block"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-500/20 p-2 rounded-lg"><ShieldCheck className="text-amber-400 h-5 w-5" /></div>
-              <div>
-                <p className="text-xs text-zinc-400">Payment Secured</p>
-                <p className="text-sm font-bold text-white">Escrow Protected</p>
-              </div>
-            </div>
-          </motion.div>
-
+          <AiAdvisoryDemo />
         </motion.div>
       </div>
     </section>

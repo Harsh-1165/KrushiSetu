@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, Suspense } from "react"
+import React, { useState, useEffect, useCallback, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -8,7 +8,6 @@ import {
   Grid3X3,
   List,
   Filter,
-  ChevronDown,
   Star,
   Heart,
   ShoppingCart,
@@ -17,6 +16,7 @@ import {
   SlidersHorizontal,
   X,
   Check,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,7 +40,6 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-  SheetFooter,
 } from "@/components/ui/sheet"
 import {
   Accordion,
@@ -50,17 +49,92 @@ import {
 } from "@/components/ui/accordion"
 import { useCart, useWishlist } from "@/lib/cart-context"
 import {
-  mockProducts,
   categories,
   locations,
   sortOptions,
-  filterProducts,
-  sortProducts,
   type MarketplaceProduct,
 } from "@/lib/marketplace-data"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import Loading from "./loading"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
+
+/** Map a raw MongoDB product doc to the MarketplaceProduct interface */
+function normalizeProduct(p: any): MarketplaceProduct {
+  const seller = p.seller || p.farmer || {}
+  const sellerName = seller.name || {}
+  return {
+    _id: p._id,
+    slug: p.slug || p._id,
+    name: p.name,
+    shortDescription: p.shortDescription || p.description?.slice(0, 100) || "",
+    description: p.description || "",
+    category: p.category || "",
+    tags: p.tags || [],
+    views: p.views ?? 0,
+    status: p.status ?? "active",
+    createdAt: p.createdAt ?? new Date().toISOString(),
+    images: Array.isArray(p.images)
+      ? p.images.map((img: any) =>
+        typeof img === "string" ? { url: img, alt: p.name, isPrimary: false } : img
+      )
+      : [{ url: "/placeholder.svg", alt: p.name, isPrimary: true }],
+    price: {
+      current: p.price?.current ?? 0,
+      mrp: p.price?.mrp ?? undefined,
+      unit: p.price?.unit ?? "kg",
+      currency: p.price?.currency ?? "INR",
+      negotiable: p.price?.negotiable ?? false,
+    },
+    inventory: {
+      available: p.inventory?.available ?? 0,
+      sold: p.inventory?.sold ?? 0,
+      minOrder: p.inventory?.minOrder ?? 1,
+      maxOrder: p.inventory?.maxOrder ?? 100,
+    },
+    attributes: {
+      variety: p.attributes?.variety ?? null,
+      grade: p.attributes?.grade ?? null,
+      isOrganic: p.attributes?.isOrganic ?? false,
+      harvestDate: p.attributes?.harvestDate ?? null,
+      expiryDate: p.attributes?.expiryDate ?? null,
+      storageInstructions: p.attributes?.storageInstructions ?? null,
+    },
+    location: {
+      state: p.location?.state ?? "",
+      district: p.location?.district ?? "",
+    },
+    shipping: {
+      available: p.shipping?.available ?? true,
+      freeShippingAbove: p.shipping?.freeShippingAbove ?? null,
+      estimatedDays: p.shipping?.estimatedDays ?? { min: 3, max: 7 },
+    },
+    ratings: {
+      average: p.ratings?.average ?? 0,
+      count: p.ratings?.count ?? 0,
+      distribution: p.ratings?.distribution ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    },
+    reviews: p.reviews || [],
+    seller: {
+      _id: seller._id ?? "",
+      name: {
+        first: sellerName.first ?? seller.profile?.firstName ?? "Farmer",
+        last: sellerName.last ?? seller.profile?.lastName ?? "",
+      },
+      farmName: seller.farmerProfile?.farmName ?? seller.profile?.farmName ?? "Local Farm",
+      avatar: seller.avatar?.url ?? seller.profile?.avatar ?? "/placeholder.svg",
+      rating: seller.ratings?.average ?? 0,
+      totalProducts: seller.stats?.totalProducts ?? 0,
+      totalSales: seller.stats?.totalSales ?? 0,
+      memberSince: seller.createdAt ?? new Date().toISOString(),
+      location: p.location?.district
+        ? `${p.location.district}, ${p.location.state}`
+        : p.location?.state ?? "",
+      isVerified: seller.isVerified ?? false,
+    },
+  }
+}
 
 function ProductListingContent() {
   const searchParams = useSearchParams()
@@ -72,6 +146,11 @@ function ProductListingContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [isLoading, setIsLoading] = useState(true)
 
+  // API data
+  const [products, setProducts] = useState<MarketplaceProduct[]>([])
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "")
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "")
@@ -81,57 +160,58 @@ function ProductListingContent() {
   const [minRating, setMinRating] = useState(0)
   const [inStockOnly, setInStockOnly] = useState(true)
   const [sortBy, setSortBy] = useState("relevance")
-
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 12
 
-  // Simulate loading
-  useEffect(() => {
-    setIsLoading(true)
-    const timer = setTimeout(() => setIsLoading(false), 500)
-    return () => clearTimeout(timer)
-  }, [searchParams])
-
-  // Update URL params
-  const updateUrlParams = (params: Record<string, string | null>) => {
-    const url = new URL(window.location.href)
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) {
-        url.searchParams.set(key, value)
-      } else {
-        url.searchParams.delete(key)
-      }
-    })
-    router.push(url.pathname + url.search, { scroll: false })
+  // Map our sort option values to the API's sortBy params
+  const apiSortMap: Record<string, { sortBy: string; sortOrder: string }> = {
+    relevance: { sortBy: "createdAt", sortOrder: "desc" },
+    newest: { sortBy: "createdAt", sortOrder: "desc" },
+    "price-low": { sortBy: "price.current", sortOrder: "asc" },
+    "price-high": { sortBy: "price.current", sortOrder: "desc" },
+    rating: { sortBy: "ratings.average", sortOrder: "desc" },
+    popular: { sortBy: "inventory.sold", sortOrder: "desc" },
   }
 
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let result = filterProducts(mockProducts, {
-      search: searchQuery,
-      category: selectedCategory,
-      minPrice: priceRange[0],
-      maxPrice: priceRange[1],
-      location: selectedLocation,
-      organic: organicOnly,
-      minRating: minRating,
-      inStock: inStockOnly,
-    })
-    return sortProducts(result, sortBy)
-  }, [searchQuery, selectedCategory, priceRange, selectedLocation, organicOnly, minRating, inStockOnly, sortBy])
+  // Fetch products from backend
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      params.set("page", String(currentPage))
+      params.set("limit", String(itemsPerPage))
+      const sort = apiSortMap[sortBy] || apiSortMap.relevance
+      params.set("sortBy", sort.sortBy)
+      params.set("sortOrder", sort.sortOrder)
+      if (searchQuery.trim()) params.set("search", searchQuery.trim())
+      if (selectedCategory) params.set("category", selectedCategory)
+      if (priceRange[0] > 0) params.set("minPrice", String(priceRange[0]))
+      if (priceRange[1] < 1500) params.set("maxPrice", String(priceRange[1]))
+      if (selectedLocation) params.set("state", selectedLocation)
+      if (organicOnly) params.set("organic", "true")
+      if (inStockOnly) params.set("inStock", "true")
+      if (minRating > 0) params.set("minRating", String(minRating))
 
-  // Paginated products
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+      const res = await fetch(`${API_BASE}/products/public?${params.toString()}`)
+      if (!res.ok) throw new Error("Failed to fetch products")
+      const json = await res.json()
+      const raw = json.data?.products ?? []
+      setProducts(raw.map(normalizeProduct))
+      const pagination = json.data?.pagination ?? {}
+      setTotalPages(pagination.pages ?? 1)
+      setTotalCount(pagination.total ?? raw.length)
+    } catch (err) {
+      console.error("[Marketplace] fetch error:", err)
+      setProducts([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [searchQuery, selectedCategory, priceRange, selectedLocation, organicOnly, inStockOnly, minRating, sortBy, currentPage])
 
-  // Reset pagination when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, selectedCategory, priceRange, selectedLocation, organicOnly, minRating, inStockOnly, sortBy])
+  useEffect(() => { fetchProducts() }, [fetchProducts])
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setCurrentPage(1) }, [searchQuery, selectedCategory, priceRange, selectedLocation, organicOnly, minRating, inStockOnly, sortBy])
 
   // Sync with URL params
   useEffect(() => {
@@ -140,6 +220,17 @@ function ProductListingContent() {
     if (category) setSelectedCategory(category)
     if (search) setSearchQuery(search)
   }, [searchParams])
+
+  const paginatedProducts = products
+
+  // Update URL params
+  const updateUrlParams = (params: Record<string, string | null>) => {
+    const url = new URL(window.location.href)
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) { url.searchParams.set(key, value) } else { url.searchParams.delete(key) }
+    })
+    router.push(url.pathname + url.search, { scroll: false })
+  }
 
   const handleAddToCart = (product: MarketplaceProduct) => {
     addItem({
@@ -594,7 +685,7 @@ function ProductListingContent() {
                     : "All Products"}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {filteredProducts.length} products found
+                {totalCount} products found
               </p>
             </div>
 
@@ -708,7 +799,7 @@ function ProductListingContent() {
                 <ProductSkeleton key={i} isListView={viewMode === "list"} />
               ))}
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : products.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
                 <Filter className="h-12 w-12 text-muted-foreground" />

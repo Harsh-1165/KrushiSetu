@@ -14,8 +14,6 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  ArrowUpRight,
-  ArrowDownRight,
   BarChart3,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,21 +26,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts"
 import { StatsCard, StatsGrid } from "./stats-card"
 import { NoOrders, NoProducts } from "./empty-state"
-import { mockData } from "@/lib/mockData"
+import { useFarmerDashboardStats } from "@/lib/use-farmer-dashboard"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns"
 
 interface FarmerDashboardProps {
   user: {
@@ -51,15 +39,14 @@ interface FarmerDashboardProps {
 }
 
 export function FarmerDashboard({ user }: FarmerDashboardProps) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [stats, setStats] = useState(mockData.farmerStats)
+  const { stats, isLoading: apiLoading, mutate } = useFarmerDashboardStats()
+  const [showSkeleton, setShowSkeleton] = useState(true)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
+    const t = setTimeout(() => setShowSkeleton(false), 600)
+    return () => clearTimeout(t)
   }, [])
+  const isLoading = showSkeleton || apiLoading
 
   const greeting = () => {
     const hour = new Date().getHours()
@@ -71,7 +58,7 @@ export function FarmerDashboard({ user }: FarmerDashboardProps) {
   const chartConfig = {
     revenue: {
       label: "Revenue",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
   }
 
@@ -88,7 +75,7 @@ export function FarmerDashboard({ user }: FarmerDashboardProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {greeting()}, {user.name.first}!
+            {greeting()}, {user?.name?.first || "Farmer"}!
           </h1>
           <p className="text-muted-foreground">
             Here&apos;s an overview of your farm&apos;s performance today.
@@ -155,6 +142,10 @@ export function FarmerDashboard({ user }: FarmerDashboardProps) {
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-[300px] w-full" />
+            ) : !stats.revenueData?.length ? (
+              <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed bg-muted/30">
+                <p className="text-sm text-muted-foreground">Revenue data will appear here once you have orders.</p>
+              </div>
             ) : (
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
                 <AreaChart
@@ -163,8 +154,8 @@ export function FarmerDashboard({ user }: FarmerDashboardProps) {
                 >
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -184,10 +175,10 @@ export function FarmerDashboard({ user }: FarmerDashboardProps) {
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="hsl(var(--chart-1))"
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
+                    stroke="var(--chart-1)"
                     strokeWidth={2}
+                    fill="url(#colorRevenue)"
+                    fillOpacity={1}
                   />
                 </AreaChart>
               </ChartContainer>
@@ -451,7 +442,7 @@ export function FarmerDashboard({ user }: FarmerDashboardProps) {
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : stats.topProducts.length > 0 ? (
               <div className="space-y-4">
                 {stats.topProducts.map((product, index) => (
                   <div
@@ -464,22 +455,26 @@ export function FarmerDashboard({ user }: FarmerDashboardProps) {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm line-clamp-1">{product.name}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>Rs. {product.price}/{product.unit}</span>
+                        <span>Rs. {product.price}/{product.unit ?? "unit"}</span>
                         <span>-</span>
                         <span className="flex items-center gap-1">
                           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          {product.ratings?.average?.toFixed(1)}
+                          {product.ratings?.average?.toFixed(1) ?? "-"}
                         </span>
                       </div>
                     </div>
                     <Badge
                       variant={product.status === "active" ? "default" : "secondary"}
                     >
-                      {product.status}
+                      {product.status ?? "active"}
                     </Badge>
                   </div>
                 ))}
               </div>
+            ) : (
+              <NoProducts
+                onAction={() => (window.location.href = "/dashboard/products/new")}
+              />
             )}
           </CardContent>
         </Card>

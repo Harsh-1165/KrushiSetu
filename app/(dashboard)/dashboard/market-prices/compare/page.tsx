@@ -172,7 +172,7 @@ export default function PriceComparePage() {
         setComparisonData(null)
       }
     } catch (error) {
-      console.log("[v0] Error fetching comparison:", error)
+      console.log("Error fetching comparison:", error)
       setComparisonData(null)
     } finally {
       setLoading(false)
@@ -461,34 +461,48 @@ export default function PriceComparePage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={true} vertical={false} />
-                    <XAxis
-                      type="number"
-                      tick={{ fontSize: 12 }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `₹${value}`}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="mandi"
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={100}
-                    />
-                    <Tooltip content={<CustomBarTooltip />} />
-                    <Bar dataKey="avgModalPrice" name="Modal Price" radius={[0, 4, 4, 0]}>
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={getBarColor(entry, index)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {chartData.length === 0 ? (
+                <div className="h-[200px] flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                  <BarChart3 className="h-12 w-12 opacity-30" />
+                  <div className="text-center">
+                    <p className="font-medium">
+                      {comparisonData ? `No mandi data found for "${crop}"` : "Select a crop to compare prices"}
+                    </p>
+                    <p className="text-sm mt-1">
+                      {comparisonData ? "Try a different crop name or expand state filters." : "Use the filters above to get started."}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={true} vertical={false} />
+                      <XAxis
+                        type="number"
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `₹${value}`}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="mandi"
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={100}
+                      />
+                      <Tooltip content={<CustomBarTooltip />} />
+                      <Bar dataKey="avgModalPrice" name="Modal Price" radius={[0, 4, 4, 0]}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getBarColor(entry, index)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
 

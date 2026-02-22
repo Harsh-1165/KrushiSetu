@@ -30,8 +30,8 @@ export interface Mandi {
       email?: string
     }
   }
-  operatingDays: string[]
-  operatingHours: {
+  operatingDays?: string[]
+  operatingHours?: {
     open: string
     close: string
   }
@@ -82,8 +82,9 @@ export interface Mandi {
   }
   todayPriceCount?: number
   distance?: number // Added when querying nearby
-  createdAt: string
-  updatedAt: string
+  source?: string // e.g. "GOVT_AGMARKNET" for Agmarknet-sourced mandis
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface MandiPrice {
@@ -409,7 +410,38 @@ export const priceApi = {
 
 // Mandi (Market) API
 export const mandiApi = {
-  // Get all mandis
+  /**
+   * Get mandi list (from government API). Use this for Mandi Finder with location.
+   * Supports lat, lng, radius, state, limit. Returns { data: Mandi[] }.
+   */
+  getList: async (params?: {
+    state?: string
+    district?: string
+    search?: string
+    lat?: number
+    lng?: number
+    radius?: number
+    limit?: number
+  }): Promise<{ data: Mandi[]; count?: number; source?: "live" | "cache" | "fallback" }> => {
+    const searchParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== "" && value !== "all") {
+          searchParams.append(key, String(value))
+        }
+      })
+    }
+    const query = searchParams.toString()
+    const response = await fetchWithAuth(`/mandi/list${query ? `?${query}` : ""}`)
+    return {
+      data: Array.isArray(response.data) ? response.data : [],
+      count: response.count,
+      source: response.source,
+    }
+  },
+
+
+  // Get all mandis (from MongoDB /markets endpoint)
   getAll: async (params?: {
     state?: string
     district?: string

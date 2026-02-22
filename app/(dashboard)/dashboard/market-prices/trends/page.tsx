@@ -108,10 +108,22 @@ export default function PriceTrendsPage() {
       const response = await priceApi.getTrends({
         crop,
         state: state === "all" ? undefined : state,
-        period,
+        period: period as any,
       })
 
-      setTrendData(response)
+      if (response) {
+        // Guard: strip rows with NaN/0 modal price so Recharts never gets bad data
+        const cleanData = (response.data ?? []).map((d: any) => ({
+          ...d,
+          min: Number(d.min) || 0,
+          modal: Number(d.modal) || Number(d.avgModalPrice) || 0,
+          max: Number(d.max) || 0,
+          arrival: Number(d.arrival) || Number(d.totalArrival) || 0,
+        })).filter((d: any) => d.modal > 0)
+        setTrendData({ ...response, data: cleanData })
+      } else {
+        setTrendData(null)
+      }
     } catch (error) {
       console.error("Error fetching trends:", error)
       toast({
@@ -213,6 +225,16 @@ export default function PriceTrendsPage() {
           <p className="text-slate-400">
             Real-time price trends, AI insights, and predictive analysis for {crop}
           </p>
+          {trendData && (
+            <span className={`inline-flex items-center gap-1 mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${trendData.source === 'live'
+              ? 'bg-green-900/40 text-green-400'
+              : trendData.source === 'cache'
+                ? 'bg-blue-900/40 text-blue-400'
+                : 'bg-amber-900/40 text-amber-400'
+              }`}>
+              {trendData.source === 'live' ? '📡 Live Mandi Data' : trendData.source === 'cache' ? '⚡ Cached' : '🔮 Simulated Trend'}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

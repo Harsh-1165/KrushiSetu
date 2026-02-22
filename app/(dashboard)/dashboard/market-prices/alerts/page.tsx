@@ -564,7 +564,7 @@ export default function PriceAlertsPage() {
       const response = await alertApi.getAll({ status: filter === "all" ? undefined : filter })
       setAlerts(response.data)
     } catch (error) {
-      console.log("[v0] Error fetching alerts:", error)
+      console.log("Error fetching alerts:", error)
       // Generate mock data
       const mockAlerts = generateMockAlerts()
       setAlerts(mockAlerts)

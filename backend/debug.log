@@ -1,0 +1,171 @@
+[13:48:16] [ML] ============================================================
+[13:48:16] [ML] SELF-TEST: Starting 3-image verification run
+[13:48:16] [ML] ============================================================
+[13:48:16] [ML] SELF-TEST [1/3]: Tomato Leaf (Disease Sample)
+[13:48:16] [ML] SELF-TEST [1/3]: URL → https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Tomato_je.jpg/320px-Tomato_je.jpg
+[13:48:16] [ML] ============================================================
+[13:48:16] [ML] IMAGE: Starting crop disease inference
+[13:48:16] [ML] IMAGE: Input URL → https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Tomato_je.jpg/320px-Tomato_je.jpg
+[13:48:16] [ML] IMAGE: Model path → C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend\ml\models\crop_disease_model.h5
+[13:48:16] [ML] IMAGE: Model file exists — 508.2 MB
+[13:48:16] [ML] IMAGE: Importing TensorFlow...
+[13:51:26] [ML] IMAGE: TensorFlow 2.20.0 imported successfully
+[13:51:26] [ML] IMAGE: Loading model weights (this may take a moment)...
+[13:51:31] [ML] IMAGE: Model Loaded Successfully in 4707ms — input shape: (None, 224, 224, 3)
+[13:51:31] [ML] IMAGE: Class indices loaded — 16 classes
+[13:51:31] [ML] IMAGE: disease_info.json loaded — 16 entries
+[13:51:31] [ML] IMAGE: Downloading image from URL...
+[13:51:32] [ML] IMAGE ERROR: Download failed — HTTP Error 403: Forbidden
+[13:51:32] [ML] SELF-TEST [1/3]: Total wall time → 196009ms
+[13:51:32] [ML] ----------------------------------------
+[13:51:32] [ML] SELF-TEST [2/3]: Corn/Maize Leaf
+[13:51:32] [ML] SELF-TEST [2/3]: URL → https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Camponotus_flavomarginatus_ant.jpg/320px-Camponotus_flavomarginatus_ant.jpg
+[13:51:32] [ML] ============================================================
+[13:51:32] [ML] IMAGE: Starting crop disease inference
+[13:51:32] [ML] IMAGE: Input URL → https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Camponotus_flavomarginatus_ant.jpg/320px-Camponotus_flavomarginatus_ant.jpg
+[13:51:32] [ML] IMAGE: Model path → C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend\ml\models\crop_disease_model.h5
+[13:51:32] [ML] IMAGE: Model file exists — 508.2 MB
+[13:51:32] [ML] IMAGE: Importing TensorFlow...
+[13:51:32] [ML] IMAGE: TensorFlow 2.20.0 imported successfully
+[13:51:32] [ML] IMAGE: Loading model weights (this may take a moment)...
+[13:51:35] [ML] IMAGE: Model Loaded Successfully in 2389ms — input shape: (None, 224, 224, 3)
+[13:51:35] [ML] IMAGE: Class indices loaded — 16 classes
+[13:51:35] [ML] IMAGE: disease_info.json loaded — 16 entries
+[13:51:35] [ML] IMAGE: Downloading image from URL...
+[13:51:36] [ML] IMAGE ERROR: Download failed — HTTP Error 403: Forbidden
+[13:51:36] [ML] SELF-TEST [2/3]: Total wall time → 3171ms
+[13:51:36] [ML] ----------------------------------------
+[13:51:36] [ML] SELF-TEST [3/3]: Non-Agricultural (Bottle)
+[13:51:36] [ML] SELF-TEST [3/3]: URL → https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Binocular_bottle_wiki.jpg/320px-Binocular_bottle_wiki.jpg
+[13:51:36] [ML] ============================================================
+[13:51:36] [ML] IMAGE: Starting crop disease inference
+[13:51:36] [ML] IMAGE: Input URL → https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Binocular_bottle_wiki.jpg/320px-Binocular_bottle_wiki.jpg
+[13:51:36] [ML] IMAGE: Model path → C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend\ml\models\crop_disease_model.h5
+[13:51:36] [ML] IMAGE: Model file exists — 508.2 MB
+[13:51:36] [ML] IMAGE: Importing TensorFlow...
+[13:51:36] [ML] IMAGE: TensorFlow 2.20.0 imported successfully
+[13:51:36] [ML] IMAGE: Loading model weights (this may take a moment)...
+[13:51:38] [ML] IMAGE: Model Loaded Successfully in 2050ms — input shape: (None, 224, 224, 3)
+[13:51:38] [ML] IMAGE: Class indices loaded — 16 classes
+[13:51:38] [ML] IMAGE: disease_info.json loaded — 16 entries
+[13:51:38] [ML] IMAGE: Downloading image from URL...
+[13:51:38] [ML] IMAGE ERROR: Download failed — HTTP Error 403: Forbidden
+[13:51:38] [ML] SELF-TEST [3/3]: Total wall time → 2580ms
+[13:51:38] [ML] ----------------------------------------
+[13:51:38] [ML] SELF-TEST: Complete. Check debug.log and stdout for results.
+[13:54:00] [ML] ============================================================
+[13:54:00] [ML] SELF-TEST: Starting 3-image verification run
+[13:54:00] [ML] ============================================================
+[13:54:00] [ML] SELF-TEST [1/3]: Tomato Early Blight Leaf (PlantVillage)
+[13:54:00] [ML] SELF-TEST [1/3]: URL → https://raw.githubusercontent.com/spMohanty/PlantVillage-Dataset/master/raw/color/Tomato_Early_blight/0a5e9323-dbad-432d-ac58-d291718345d9___RS_Erly.B%203.8518.JPG
+[13:54:00] [ML] ============================================================
+[13:54:00] [ML] IMAGE: Starting crop disease inference
+[13:54:00] [ML] IMAGE: Input URL → https://raw.githubusercontent.com/spMohanty/PlantVillage-Dataset/master/raw/color/Tomato_Early_blight/0a5e9323-dbad-432d-ac58-d291718345d9___RS_Erly.B%203.8518.JPG
+[13:54:00] [ML] IMAGE: Model path → C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend\ml\models\crop_disease_model.h5
+[13:54:00] [ML] IMAGE: Model file exists — 508.2 MB
+[13:54:00] [ML] IMAGE: Importing TensorFlow...
+[13:54:43] [ML] IMAGE: TensorFlow 2.20.0 imported successfully
+[13:54:43] [ML] IMAGE: Loading model weights (this may take a moment)...
+[13:54:47] [ML] IMAGE: Model Loaded Successfully in 4085ms — input shape: (None, 224, 224, 3)
+[13:54:47] [ML] IMAGE: Class indices loaded — 16 classes
+[13:54:47] [ML] IMAGE: disease_info.json loaded — 16 entries
+[13:54:47] [ML] IMAGE: Downloading image from URL...
+[13:54:48] [ML] IMAGE ERROR: Download failed — HTTP Error 404: Not Found
+[13:54:48] [ML] SELF-TEST [1/3]: Total wall time → 48803ms
+[13:54:48] [ML] ----------------------------------------
+[13:54:48] [ML] SELF-TEST [2/3]: Corn (Maize) Healthy Leaf (PlantVillage)
+[13:54:48] [ML] SELF-TEST [2/3]: URL → https://raw.githubusercontent.com/spMohanty/PlantVillage-Dataset/master/raw/color/Corn_(maize)___healthy/00f91c87-8d43-4c48-beae-0e5c2de8ee1a___R.S_HL%203440.JPG
+[13:54:48] [ML] ============================================================
+[13:54:48] [ML] IMAGE: Starting crop disease inference
+[13:54:48] [ML] IMAGE: Input URL → https://raw.githubusercontent.com/spMohanty/PlantVillage-Dataset/master/raw/color/Corn_(maize)___healthy/00f91c87-8d43-4c48-beae-0e5c2de8ee1a___R.S_HL%203440.JPG
+[13:54:48] [ML] IMAGE: Model path → C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend\ml\models\crop_disease_model.h5
+[13:54:48] [ML] IMAGE: Model file exists — 508.2 MB
+[13:54:48] [ML] IMAGE: Importing TensorFlow...
+[13:54:48] [ML] IMAGE: TensorFlow 2.20.0 imported successfully
+[13:54:48] [ML] IMAGE: Loading model weights (this may take a moment)...
+[13:54:51] [ML] IMAGE: Model Loaded Successfully in 2619ms — input shape: (None, 224, 224, 3)
+[13:54:51] [ML] IMAGE: Class indices loaded — 16 classes
+[13:54:51] [ML] IMAGE: disease_info.json loaded — 16 entries
+[13:54:51] [ML] IMAGE: Downloading image from URL...
+[13:54:51] [ML] IMAGE ERROR: Download failed — HTTP Error 404: Not Found
+[13:54:51] [ML] SELF-TEST [2/3]: Total wall time → 3124ms
+[13:54:51] [ML] ----------------------------------------
+[13:54:51] [ML] SELF-TEST [3/3]: Non-Agricultural (Random JPEG)
+[13:54:52] [ML] SELF-TEST [3/3]: URL → https://www.gstatic.com/webp/gallery/1.jpg
+[13:54:52] [ML] ============================================================
+[13:54:52] [ML] IMAGE: Starting crop disease inference
+[13:54:52] [ML] IMAGE: Input URL → https://www.gstatic.com/webp/gallery/1.jpg
+[13:54:52] [ML] IMAGE: Model path → C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend\ml\models\crop_disease_model.h5
+[13:54:52] [ML] IMAGE: Model file exists — 508.2 MB
+[13:54:52] [ML] IMAGE: Importing TensorFlow...
+[13:54:52] [ML] IMAGE: TensorFlow 2.20.0 imported successfully
+[13:54:52] [ML] IMAGE: Loading model weights (this may take a moment)...
+[13:54:53] [ML] IMAGE: Model Loaded Successfully in 1943ms — input shape: (None, 224, 224, 3)
+[13:54:53] [ML] IMAGE: Class indices loaded — 16 classes
+[13:54:53] [ML] IMAGE: disease_info.json loaded — 16 entries
+[13:54:54] [ML] IMAGE: Downloading image from URL...
+[13:54:54] [ML] IMAGE: Image Downloaded for ML Inference — 44891 bytes in 372ms
+[13:54:54] [ML] IMAGE: Preprocessing — resize to 224×224, normalize...
+[13:54:55] [ML] IMAGE: Preprocessing complete in 729ms — shape: (1, 224, 224, 3)
+[13:54:55] [ML] IMAGE: Running CNN inference...
+[13:54:58] [ML] IMAGE: Inference complete in 2938ms — top raw confidence: 0.7999
+[13:54:58] [ML] IMAGE: Predicted class → 'Tomato_Leaf_Mold' | Confidence → 0.1632 (16.3%)
+[13:54:58] [ML] IMAGE: Total execution time → 6051ms
+[13:54:58] [ML] IMAGE: Resolved → crop='Tomato', disease='Leaf Mold'
+[13:54:58] [ML] SELF-TEST [3/3]: Total wall time → 6101ms
+[13:54:58] [ML] ----------------------------------------
+[13:54:58] [ML] SELF-TEST: Complete. Check debug.log and stdout for results.
+[2026-02-22T13:21:02.286Z] processing request. hasFile: true, Soil: false
+[2026-02-22T13:21:02.298Z] [Service] Starting. imageUrl=true, soilData=false, location=false, mode=crop
+[2026-02-22T13:21:02.300Z] [Service] Image path: https://res.cloudinary.com/dl3qcrq6e/image/upload/v1771766458/greentrace/crops/efgnpt4af4eboupoq8vv.png
+[18:51:02] [ML] ============================================================
+[18:51:02] [ML] IMAGE: Starting crop disease inference
+[18:51:02] [ML] IMAGE: Input URL → https://res.cloudinary.com/dl3qcrq6e/image/upload/v1771766458/greentrace/crops/efgnpt4af4eboupoq8vv.png
+[18:51:02] [ML] IMAGE: Model path → C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend\ml\models\crop_disease_model.h5
+[18:51:02] [ML] IMAGE: Model file exists — 508.2 MB
+[18:51:02] [ML] IMAGE: Importing TensorFlow...
+[18:51:14] [ML] IMAGE: TensorFlow 2.20.0 imported successfully
+[18:51:14] [ML] IMAGE: Loading model weights (this may take a moment)...
+[18:51:15] [ML] IMAGE: Model Loaded Successfully in 1053ms — input shape: (None, 224, 224, 3)
+[18:51:15] [ML] IMAGE: Class indices loaded — 16 classes
+[18:51:15] [ML] IMAGE: disease_info.json loaded — 16 entries
+[18:51:15] [ML] IMAGE: Downloading image from URL...
+[18:51:17] [ML] IMAGE: Image Downloaded for ML Inference — 1914976 bytes in 1743ms
+[18:51:17] [ML] IMAGE: Preprocessing — resize to 224×224, normalize...
+[18:51:17] [ML] IMAGE: Preprocessing complete in 148ms — shape: (1, 224, 224, 3)
+[18:51:17] [ML] IMAGE: Running CNN inference...
+[18:51:18] [ML] IMAGE: Inference complete in 655ms — top raw confidence: 0.8711
+[18:51:18] [ML] IMAGE: Predicted class → 'Pepper__bell___Bacterial_spot' | Confidence → 0.8711 (87.1%)
+[18:51:18] [ML] IMAGE: Total execution time → 3615ms
+[18:51:18] [ML] IMAGE: Resolved → crop='Bell Pepper', disease='Bacterial Spot'
+[2026-02-22T13:21:19.397Z] [Service] Image scan done. Status: ok
+[2026-02-22T13:21:19.398Z] [Service] All done. Returning results.
+[Route] Service returned. Sending response...
+[Route] Response sent successfully.
+[2026-02-22T13:22:25.255Z] processing request. hasFile: true, Soil: false
+[2026-02-22T13:22:25.256Z] [Service] Starting. imageUrl=true, soilData=false, location=false, mode=crop
+[2026-02-22T13:22:25.258Z] [Service] Image path: https://res.cloudinary.com/dl3qcrq6e/image/upload/v1771766541/greentrace/crops/haecjwz6ipx5bosly6y4.png
+[18:52:25] [ML] ============================================================
+[18:52:25] [ML] IMAGE: Starting crop disease inference
+[18:52:25] [ML] IMAGE: Input URL → https://res.cloudinary.com/dl3qcrq6e/image/upload/v1771766541/greentrace/crops/haecjwz6ipx5bosly6y4.png
+[18:52:25] [ML] IMAGE: Model path → C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend\ml\models\crop_disease_model.h5
+[18:52:25] [ML] IMAGE: Model file exists — 508.2 MB
+[18:52:25] [ML] IMAGE: Importing TensorFlow...
+[18:52:34] [ML] IMAGE: TensorFlow 2.20.0 imported successfully
+[18:52:34] [ML] IMAGE: Loading model weights (this may take a moment)...
+[18:52:35] [ML] IMAGE: Model Loaded Successfully in 607ms — input shape: (None, 224, 224, 3)
+[18:52:35] [ML] IMAGE: Class indices loaded — 16 classes
+[18:52:35] [ML] IMAGE: disease_info.json loaded — 16 entries
+[18:52:35] [ML] IMAGE: Downloading image from URL...
+[18:52:36] [ML] IMAGE: Image Downloaded for ML Inference — 2188804 bytes in 1724ms
+[18:52:36] [ML] IMAGE: Preprocessing — resize to 224×224, normalize...
+[18:52:36] [ML] IMAGE: Preprocessing complete in 104ms — shape: (1, 224, 224, 3)
+[18:52:36] [ML] IMAGE: Running CNN inference...
+[18:52:37] [ML] IMAGE: Inference complete in 326ms — top raw confidence: 0.4686
+[18:52:37] [ML] IMAGE: Predicted class → 'Potato___Early_blight' | Confidence → 0.2847 (28.5%)
+[18:52:37] [ML] IMAGE: Total execution time → 2773ms
+[18:52:37] [ML] IMAGE: Resolved → crop='Potato', disease='Early Blight'
+[2026-02-22T13:22:38.189Z] [Service] Image scan done. Status: ok
+[2026-02-22T13:22:38.190Z] [Service] All done. Returning results.
+[Route] Service returned. Sending response...
+[Route] Response sent successfully.

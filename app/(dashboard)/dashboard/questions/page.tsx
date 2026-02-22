@@ -355,7 +355,7 @@ export default function QuestionsPage() {
         setStats(statsRes)
         setTrendingQuestions(trendingRes.questions)
       } catch (error) {
-        console.log("[v0] Error fetching initial data:", error)
+        console.log("Error fetching initial data:", error)
       }
     }
     fetchInitialData()
@@ -382,7 +382,7 @@ export default function QuestionsPage() {
         setHasMore(response.pagination.hasNext || false)
         setPage(1)
       } catch (error) {
-        console.log("[v0] Error fetching questions:", error)
+        console.log("Error fetching questions:", error)
       } finally {
         setLoading(false)
       }
@@ -410,7 +410,7 @@ export default function QuestionsPage() {
       setHasMore(response.pagination.hasNext || false)
       setPage((prev) => prev + 1)
     } catch (error) {
-      console.log("[v0] Error loading more questions:", error)
+      console.log("Error loading more questions:", error)
     } finally {
       setLoadingMore(false)
     }
@@ -478,7 +478,10 @@ export default function QuestionsPage() {
                 </div>
               </form>
               <div className="flex gap-2">
-                <Select value={status} onValueChange={setStatus}>
+                <Select
+                  value={status || "all"}
+                  onValueChange={(v) => setStatus(v === "all" ? "" : v)}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -490,7 +493,10 @@ export default function QuestionsPage() {
                     <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={urgency} onValueChange={setUrgency}>
+                <Select
+                  value={urgency || "all"}
+                  onValueChange={(v) => setUrgency(v === "all" ? "" : v)}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Urgency" />
                   </SelectTrigger>
@@ -518,7 +524,10 @@ export default function QuestionsPage() {
                     <div className="mt-6 space-y-6">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Crop Type</label>
-                        <Select value={cropType} onValueChange={setCropType}>
+                        <Select
+                          value={cropType || "all"}
+                          onValueChange={(v) => setCropType(v === "all" ? "" : v)}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select crop type" />
                           </SelectTrigger>

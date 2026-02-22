@@ -98,7 +98,7 @@ export function ConsumerDashboard({ user }: ConsumerDashboardProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {greeting()}, {user.name.first}!
+            {greeting()}, {user?.name?.first || "User"}!
           </h1>
           <p className="text-muted-foreground">
             Here&apos;s what&apos;s happening with your orders and favorites.

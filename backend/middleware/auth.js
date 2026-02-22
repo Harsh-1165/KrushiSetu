@@ -268,6 +268,30 @@ const userRateLimit = (maxRequests, windowMs) => {
   }
 }
 
+/**
+ * isOwnerOrAdmin middleware
+ * Allows access if the authenticated user is an admin OR is the owner of the
+ * resource identified by req.params.id
+ */
+const isOwnerOrAdmin = (req, res, next) => {
+  if (!req.user) {
+    return next(new AppError("Authentication required", 401))
+  }
+
+  // Admin can access any resource
+  if (req.user.role === "admin") {
+    return next()
+  }
+
+  // Check if the authenticated user owns the resource (req.params.id)
+  const resourceId = req.params.id
+  if (resourceId && req.user._id.toString() === resourceId.toString()) {
+    return next()
+  }
+
+  return next(new AppError("Access denied. You can only modify your own account.", 403))
+}
+
 module.exports = {
   authenticate,
   optionalAuth,
@@ -277,7 +301,7 @@ module.exports = {
   requireKycVerification,
   requireOwnership,
   userRateLimit,
-  isOwnerOrAdmin: authorize,
+  isOwnerOrAdmin,
   checkPermission: requirePermissions,
   protect: authenticate,
 }

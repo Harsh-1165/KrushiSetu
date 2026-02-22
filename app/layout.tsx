@@ -14,7 +14,6 @@ export const metadata: Metadata = {
     "Connect with farmers, get expert crop advice, track real-time market prices, and access agricultural knowledge. Your trusted agricultural marketplace.",
   keywords: ["agriculture", "farming", "marketplace", "crop advisory", "mandi prices", "organic produce"],
   authors: [{ name: "GreenTrace" }],
-  generator: "v0.app",
   icons: {
     icon: [
       {

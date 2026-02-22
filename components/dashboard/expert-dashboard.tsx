@@ -37,7 +37,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StatsCard, StatsGrid } from "./stats-card"
 import { NoQuestions, NoArticles } from "./empty-state"
-import { mockData } from "@/lib/mockData"
+import { useExpertDashboardStats } from "@/lib/use-expert-dashboard"
 import { cn } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
 
@@ -48,15 +48,14 @@ interface ExpertDashboardProps {
 }
 
 export function ExpertDashboard({ user }: ExpertDashboardProps) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [stats, setStats] = useState(mockData.expertStats)
+  const { stats } = useExpertDashboardStats()
+  const [showSkeleton, setShowSkeleton] = useState(true)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
+    const t = setTimeout(() => setShowSkeleton(false), 600)
+    return () => clearTimeout(t)
   }, [])
+  const isLoading = showSkeleton
 
   const greeting = () => {
     const hour = new Date().getHours()
@@ -102,10 +101,11 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
     }
   }
 
-  // Calculate profile completeness from fields
-  const completedFields = Object.values(stats.profileFields).filter(Boolean).length
-  const totalFields = Object.keys(stats.profileFields).length
-  const profilePercentage = Math.round((completedFields / totalFields) * 100)
+  // Calculate profile completeness from fields (guard against empty profileFields → NaN)
+  const completedFields = Object.values(stats.profileFields || {}).filter(Boolean).length
+  const totalFields = Object.keys(stats.profileFields || {}).length
+  const profilePercentage =
+    totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0
 
   return (
     <div className="space-y-6">
@@ -113,7 +113,7 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {greeting()}, {user.name.first}!
+            {greeting()}, {user?.name?.first || "Expert"}!
           </h1>
           <p className="text-muted-foreground">
             Help farmers with their questions and share your expertise.
@@ -142,20 +142,37 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
           value={stats.totalAnswers}
           description={`${stats.weeklyAnswers} this week`}
           icon={MessageSquare}
-          trend={{ value: Math.round(((stats.answerStats.thisWeek - stats.answerStats.lastWeek) / stats.answerStats.lastWeek) * 100), isPositive: stats.answerStats.thisWeek > stats.answerStats.lastWeek }}
+          trend={
+            stats.answerStats.lastWeek > 0
+              ? {
+                  value: Math.round(
+                    ((stats.answerStats.thisWeek - stats.answerStats.lastWeek) /
+                      stats.answerStats.lastWeek) *
+                      100
+                  ),
+                  isPositive: stats.answerStats.thisWeek >= stats.answerStats.lastWeek,
+                }
+              : stats.answerStats.thisWeek > 0
+                ? { value: 100, isPositive: true }
+                : undefined
+          }
           loading={isLoading}
         />
         <StatsCard
           title="Total Upvotes"
-          value={stats.totalUpvotes.toLocaleString()}
-          description={`${stats.answerStats.avgUpvotesPerAnswer} avg per answer`}
+          value={Number(stats.totalUpvotes).toLocaleString()}
+          description={`${stats.answerStats.avgUpvotesPerAnswer ?? 0} avg per answer`}
           icon={ThumbsUp}
-          trend={{ value: 8.7, isPositive: true }}
+          trend={
+            stats.totalAnswers > 0
+              ? { value: 8.7, isPositive: true }
+              : undefined
+          }
           loading={isLoading}
         />
         <StatsCard
           title="Average Rating"
-          value={stats.averageRating.toFixed(1)}
+          value={Number(stats.averageRating).toFixed(1)}
           description={`${stats.acceptedAnswers} accepted answers`}
           icon={Star}
           loading={isLoading}
@@ -163,7 +180,7 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
         <StatsCard
           title="Articles Published"
           value={stats.articlesPublished}
-          description={`${stats.articles.reduce((acc, a) => acc + a.views, 0).toLocaleString()} total views`}
+          description={`${(stats.articles ?? []).reduce((acc, a) => acc + (a.views ?? 0), 0).toLocaleString()} total views`}
           icon={FileText}
           loading={isLoading}
         />
@@ -188,7 +205,9 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Out of {stats.totalExperts} verified experts on the platform
+                    {stats.totalExperts > 0
+                      ? `Out of ${stats.totalExperts} verified experts on the platform`
+                      : "Verified expert on the platform"}
                   </p>
                 </div>
               </div>
@@ -229,10 +248,15 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">Profile Completeness</span>
-                    <span className="font-bold text-primary">{profilePercentage}%</span>
+                    <span className="font-bold text-primary">
+                      {Number.isNaN(profilePercentage) ? 0 : profilePercentage}%
+                    </span>
                   </div>
-                  <Progress value={profilePercentage} className="h-2" />
-                  
+                  <Progress
+                    value={Number.isNaN(profilePercentage) ? 0 : Math.min(100, Math.max(0, profilePercentage))}
+                    className="h-2"
+                  />
+
                   {/* Missing fields */}
                   {profilePercentage < 100 && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
@@ -363,8 +387,8 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                           {question.title}
                         </h4>
                       </Link>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={cn("text-xs shrink-0", getUrgencyColor(question.urgency))}
                       >
                         {question.urgency === "high" && <Zap className="h-3 w-3 mr-1" />}
@@ -396,7 +420,7 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Quick action to see more */}
                 <Button variant="outline" className="w-full bg-transparent" asChild>
                   <Link href="/dashboard/questions?filter=unanswered">
@@ -489,7 +513,7 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : (stats.recentActivity?.length ?? 0) > 0 ? (
               <div className="relative">
                 {/* Timeline line */}
                 <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
@@ -528,6 +552,12 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                     </div>
                   ))}
                 </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                <TrendingUp className="h-12 w-12 mb-3 opacity-50" />
+                <p className="font-medium text-foreground">No activity yet</p>
+                <p className="text-sm">Answer questions or publish articles to see your contributions here.</p>
               </div>
             )}
           </CardContent>
@@ -625,7 +655,7 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                 <span className="text-xs text-muted-foreground">{stats.pendingQuestions} pending</span>
               </Link>
             </Button>
-            
+
             <Button variant="outline" className="h-auto py-4 flex-col gap-2 bg-transparent hover:bg-primary/5" asChild>
               <Link href="/dashboard/articles/new">
                 <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
@@ -635,7 +665,7 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                 <span className="text-xs text-muted-foreground">Share knowledge</span>
               </Link>
             </Button>
-            
+
             <Button variant="outline" className="h-auto py-4 flex-col gap-2 bg-transparent hover:bg-primary/5" asChild>
               <Link href="/dashboard/my-answers">
                 <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -645,14 +675,16 @@ export function ExpertDashboard({ user }: ExpertDashboardProps) {
                 <span className="text-xs text-muted-foreground">{stats.totalAnswers} total</span>
               </Link>
             </Button>
-            
+
             <Button variant="outline" className="h-auto py-4 flex-col gap-2 bg-transparent hover:bg-primary/5" asChild>
               <Link href="/dashboard/profile">
                 <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
                   <User className="h-5 w-5 text-orange-600" />
                 </div>
                 <span className="font-medium">Edit Profile</span>
-                <span className="text-xs text-muted-foreground">{profilePercentage}% complete</span>
+                <span className="text-xs text-muted-foreground">
+                  {Number.isNaN(profilePercentage) ? 0 : profilePercentage}% complete
+                </span>
               </Link>
             </Button>
           </div>

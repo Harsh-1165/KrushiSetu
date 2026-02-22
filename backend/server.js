@@ -13,7 +13,13 @@ dotenv.config({ path: path.join(__dirname, ".env") })
 // Import app
 const app = require("./app")
 const logger = require("./utils/logger")
+const { validateEnv } = require("./utils/validateEnv")
+const { ensureIndexes } = require("./scripts/ensureIndexes")
+const { validateMLStartup } = require("./utils/mlStartup")
 const { uncaughtExceptionHandler, unhandledRejectionHandler } = require("./middleware/errorHandler")
+
+// Validate env vars FIRST — exits immediately on critical missing vars
+validateEnv()
 
 // Handle uncaught exceptions
 process.on("uncaughtException", uncaughtExceptionHandler)
@@ -34,6 +40,9 @@ const connectDB = async () => {
 
     await mongoose.connect(mongoURI, options)
     logger.info("MongoDB connected successfully")
+
+    // Ensure indexes after connection (non-blocking on failure)
+    await ensureIndexes()
 
     // Handle connection events
     mongoose.connection.on("error", (err) => {
@@ -69,6 +78,9 @@ const startServer = async () => {
     logger.info(`Server listening on http://${HOST}:${PORT}`)
     logger.info(`API available at http://${HOST}:${PORT}/api/v1`)
   })
+
+  // ML startup validation — runs in background, never blocks server start
+  validateMLStartup().catch(err => logger.error('[ML Startup] Unexpected error:', err.message))
 
   // Handle unhandled promise rejections
   process.on("unhandledRejection", unhandledRejectionHandler(server))

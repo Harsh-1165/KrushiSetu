@@ -1,4 +1,0 @@
-Time: 2026-02-01T12:57:31.697Z
-Cloud Name Env: dl3qcrq6e
-Has Cloudinary: true
-CWD: C:\Users\HARSH\Downloads\greentracearchitectureplan111\backend

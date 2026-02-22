@@ -201,77 +201,119 @@ router.post(
     // Generate order number
     const orderNumber = await Order.generateOrderNumber()
 
-    // Create order
-    const order = new Order({
-      orderNumber,
-      buyer: req.user._id,
-      sellers: orderData.sellers,
-      items: orderData.items,
-      pricing: orderData.pricing,
-      shippingAddress: {
-        fullName: shippingAddress.fullName,
-        phone: shippingAddress.phone,
-        alternatePhone: shippingAddress.alternatePhone,
-        email: shippingAddress.email || req.user.email,
-        street: shippingAddress.street,
-        landmark: shippingAddress.landmark,
-        village: shippingAddress.village,
-        city: shippingAddress.city,
-        district: shippingAddress.district,
-        state: shippingAddress.state,
-        pincode: shippingAddress.pincode,
-        country: shippingAddress.country || "India",
-        addressType: shippingAddress.addressType || "home",
-      },
-      billingAddress: billingAddress || shippingAddress,
-      billingAddressSameAsShipping: !billingAddress,
-      payment: {
-        method: paymentMethod,
-        status: paymentMethod === "cod" ? "pending" : "pending",
-      },
-      delivery: {
-        method: deliveryMethod || "standard",
-        cost: orderData.pricing.shipping,
-        estimatedDelivery: {
-          from: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-          to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-        },
-      },
-      buyerNote,
-      status: "pending",
-      source: "web",
-    })
+    // ─── ATOMIC TRANSACTION ────────────────────────────────────────────────
+    // Use a MongoDB session to ensure order creation + inventory decrement
+    // are atomic. Prevents overselling if two orders arrive simultaneously.
+    const session = await mongoose.startSession()
+    let order
 
-    await order.save()
+    try {
+      await session.withTransaction(async () => {
+        // Re-check inventory inside the transaction to prevent race conditions
+        for (const item of orderData.items) {
+          const product = await Product.findById(item.product).session(session)
+          const available = product?.inventory?.available ?? 0
+          const qty = item.quantity
+          if (available < qty) {
+            throw new AppError(
+              `Stock changed during checkout: only ${available} units of "${product?.name}" available`,
+              409
+            )
+          }
+        }
 
-    // Update product inventory (reserve)
-    for (const item of orderData.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: {
-          "inventory.available": -item.quantity,
-          "inventory.reserved": item.quantity,
-        },
+        // Create the order document
+        order = new Order({
+          orderNumber,
+          buyer: req.user._id,
+          sellers: orderData.sellers,
+          items: orderData.items,
+          pricing: orderData.pricing,
+          shippingAddress: {
+            fullName: shippingAddress.fullName,
+            phone: shippingAddress.phone,
+            alternatePhone: shippingAddress.alternatePhone,
+            email: shippingAddress.email || req.user.email,
+            street: shippingAddress.street,
+            landmark: shippingAddress.landmark,
+            village: shippingAddress.village,
+            city: shippingAddress.city,
+            district: shippingAddress.district,
+            state: shippingAddress.state,
+            pincode: shippingAddress.pincode,
+            country: shippingAddress.country || "India",
+            addressType: shippingAddress.addressType || "home",
+          },
+          billingAddress: billingAddress || shippingAddress,
+          billingAddressSameAsShipping: !billingAddress,
+          payment: {
+            method: paymentMethod,
+            status: "pending",
+          },
+          delivery: {
+            method: deliveryMethod || "standard",
+            cost: orderData.pricing.shipping,
+            estimatedDelivery: {
+              from: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+              to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+          },
+          buyerNote,
+          status: "pending",
+          source: "web",
+        })
+
+        await order.save({ session })
+
+        // Decrement stock atomically (inside session — rolls back if save failed)
+        for (const item of orderData.items) {
+          const result = await Product.findOneAndUpdate(
+            {
+              _id: item.product,
+              "inventory.available": { $gte: item.quantity }, // atomic guard
+            },
+            {
+              $inc: {
+                "inventory.available": -item.quantity,
+                "inventory.reserved": item.quantity,
+              },
+            },
+            { session, new: true }
+          )
+
+          if (!result) {
+            throw new AppError(
+              `Inventory update failed for product ${item.product} — stock may have changed`,
+              409
+            )
+          }
+        }
+
+        // Update buyer order stats
+        await User.findByIdAndUpdate(
+          req.user._id,
+          { $inc: { "stats.totalOrders": 1 } },
+          { session }
+        )
+
+        // Auto-confirm COD
+        if (paymentMethod === "cod") {
+          order.status = "confirmed"
+          order.confirmedAt = new Date()
+          order.statusHistory.push({
+            status: "confirmed",
+            timestamp: new Date(),
+            note: "COD order confirmed automatically",
+          })
+          await order.save({ session })
+        }
       })
+    } finally {
+      session.endSession()
     }
+    // ─── END TRANSACTION ───────────────────────────────────────────────────
 
-    // Update buyer's order count
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: { "stats.totalOrders": 1 },
-    })
-
-    // If COD, automatically confirm order
-    if (paymentMethod === "cod") {
-      order.status = "confirmed"
-      order.confirmedAt = new Date()
-      order.statusHistory.push({
-        status: "confirmed",
-        timestamp: new Date(),
-        note: "COD order confirmed automatically",
-      })
-      await order.save()
-    }
-
-    // Populate for response
+    // Populate for response (outside transaction is fine)
     await order.populate([
       { path: "buyer", select: "profile.firstName profile.lastName email" },
       { path: "items.product", select: "name slug images price" },
@@ -282,6 +324,7 @@ router.post(
       message: "Order created successfully",
       data: { order },
     })
+
   })
 )
 

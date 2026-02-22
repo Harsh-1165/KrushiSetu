@@ -11,6 +11,14 @@ const cors = require("cors")
 const getAllowedOrigins = () => {
   const origins = [process.env.FRONTEND_URL, process.env.ADMIN_URL].filter(Boolean)
 
+  // Include any extra origins from CORS_ORIGINS env var (comma-separated)
+  if (process.env.CORS_ORIGINS) {
+    process.env.CORS_ORIGINS.split(",").forEach((o) => {
+      const trimmed = o.trim()
+      if (trimmed && !origins.includes(trimmed)) origins.push(trimmed)
+    })
+  }
+
   // Add development origins
   // Allow localhost if in development mode or if NODE_ENV is unset
   if (!process.env.NODE_ENV || process.env.NODE_ENV.trim() === "development") {

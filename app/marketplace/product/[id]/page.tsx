@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, use } from "react"
+import React, { useState, useEffect, use } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -25,6 +25,7 @@ import {
   Calendar,
   Award,
   Store,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,13 +37,88 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCart, useWishlist } from "@/lib/cart-context"
 import {
-  getProductById,
-  getRelatedProducts,
-  getSellerProducts,
   type MarketplaceProduct,
 } from "@/lib/marketplace-data"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
+
+/** Normalize a raw MongoDB product into the MarketplaceProduct shape */
+function normalizeProduct(p: any): MarketplaceProduct {
+  const seller = p.seller || p.farmer || {}
+  const sellerName = seller.name || {}
+  return {
+    _id: p._id,
+    slug: p.slug || p._id,
+    name: p.name,
+    shortDescription: p.shortDescription || p.description?.slice(0, 120) || "",
+    description: p.description || "",
+    category: p.category || "",
+    tags: p.tags || [],
+    views: p.views ?? 0,
+    status: p.status ?? "active",
+    createdAt: p.createdAt ?? new Date().toISOString(),
+    images: Array.isArray(p.images)
+      ? p.images.map((img: any) =>
+        typeof img === "string" ? { url: img, alt: p.name, isPrimary: false } : img
+      )
+      : [{ url: "/placeholder.svg", alt: p.name, isPrimary: true }],
+    price: {
+      current: p.price?.current ?? 0,
+      mrp: p.price?.mrp ?? undefined,
+      unit: p.price?.unit ?? "kg",
+      currency: p.price?.currency ?? "INR",
+      negotiable: p.price?.negotiable ?? false,
+    },
+    inventory: {
+      available: p.inventory?.available ?? 0,
+      sold: p.inventory?.sold ?? 0,
+      minOrder: p.inventory?.minOrder ?? 1,
+      maxOrder: p.inventory?.maxOrder ?? 100,
+    },
+    attributes: {
+      variety: p.attributes?.variety ?? undefined,
+      grade: p.attributes?.grade ?? undefined,
+      isOrganic: p.attributes?.isOrganic ?? false,
+      harvestDate: p.attributes?.harvestDate ?? undefined,
+      expiryDate: p.attributes?.expiryDate ?? undefined,
+      storageInstructions: p.attributes?.storageInstructions ?? undefined,
+    },
+    location: {
+      state: p.location?.state ?? "",
+      district: p.location?.district ?? "",
+    },
+    shipping: {
+      available: p.shipping?.available ?? true,
+      freeShippingAbove: p.shipping?.freeShippingAbove ?? undefined,
+      estimatedDays: p.shipping?.estimatedDays ?? { min: 3, max: 7 },
+    },
+    ratings: {
+      average: p.ratings?.average ?? 0,
+      count: p.ratings?.count ?? 0,
+      distribution: p.ratings?.distribution ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    },
+    reviews: p.reviews || [],
+    seller: {
+      _id: seller._id ?? "",
+      name: {
+        first: sellerName.first ?? seller.profile?.firstName ?? "Farmer",
+        last: sellerName.last ?? seller.profile?.lastName ?? "",
+      },
+      farmName: seller.farmerProfile?.farmName ?? seller.profile?.farmName ?? "Local Farm",
+      avatar: seller.avatar?.url ?? seller.profile?.avatar ?? "/placeholder.svg",
+      rating: seller.ratings?.average ?? 0,
+      totalProducts: seller.stats?.totalProducts ?? 0,
+      totalSales: seller.stats?.totalSales ?? 0,
+      memberSince: seller.createdAt ?? new Date().toISOString(),
+      location: p.location?.district
+        ? `${p.location.district}, ${p.location.state}`
+        : p.location?.state ?? "",
+      isVerified: seller.isVerified ?? false,
+    },
+  }
+}
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -50,12 +126,52 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const { addItem, isInCart, getItemQuantity, updateQuantity } = useCart()
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
 
-  const product = getProductById(resolvedParams.id)
-  const relatedProducts = product ? getRelatedProducts(product) : []
-  const sellerProducts = product ? getSellerProducts(product.seller._id, product._id) : []
-
+  const [product, setProduct] = useState<MarketplaceProduct | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([])
+  const [sellerProducts, setSellerProducts] = useState<MarketplaceProduct[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setIsLoading(true)
+      try {
+        const res = await fetch(`${API_BASE}/products/${resolvedParams.id}`)
+        if (!res.ok) throw new Error("Product not found")
+        const json = await res.json()
+        const rawProduct = json.data?.product
+        const rawRelated = json.data?.relatedProducts ?? []
+        const rawSeller = json.data?.sellerProducts ?? []
+        if (rawProduct) {
+          setProduct(normalizeProduct(rawProduct))
+          setRelatedProducts(rawRelated.map(normalizeProduct))
+          setSellerProducts(rawSeller.map(normalizeProduct))
+        }
+      } catch (err) {
+        console.error("[ProductDetail] fetch error:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchProduct()
+  }, [resolvedParams.id])
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid gap-8 lg:grid-cols-2">
+          <Skeleton className="aspect-square rounded-lg" />
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-6 w-1/2" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!product) {
     return (

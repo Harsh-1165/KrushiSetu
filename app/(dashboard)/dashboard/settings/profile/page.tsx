@@ -128,14 +128,14 @@ const mockUser: UserProfile = {
 export default function ProfileSettingsPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [activeTab, setActiveTab] = useState("personal")
-  
+
   // Form state
   const [formData, setFormData] = useState<ProfileUpdateData>({
     name: { first: "", last: "" },
@@ -172,14 +172,14 @@ export default function ProfileSettingsPage() {
       qualifications: [],
     },
   })
-  
+
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({})
-  
+
   // New crop/specialization input
   const [newCrop, setNewCrop] = useState("")
   const [newSpecialization, setNewSpecialization] = useState("")
-  
+
   // Load user profile
   useEffect(() => {
     const loadProfile = async () => {
@@ -201,10 +201,10 @@ export default function ProfileSettingsPage() {
         setIsLoading(false)
       }
     }
-    
+
     loadProfile()
   }, [])
-  
+
   const initializeFormData = (userData: UserProfile) => {
     setFormData({
       name: { first: userData.name.first, last: userData.name.last },
@@ -242,31 +242,31 @@ export default function ProfileSettingsPage() {
       },
     })
   }
-  
-  const handleInputChange = (field: string, value: string | number | boolean) => {
+
+  const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
     setHasChanges(true)
     setErrors({ ...errors, [field]: "" })
-    
+
     const fields = field.split(".")
     setFormData((prev) => {
       const updated = { ...prev }
       let current: Record<string, unknown> = updated
-      
+
       for (let i = 0; i < fields.length - 1; i++) {
         if (!current[fields[i]]) {
           current[fields[i]] = {}
         }
         current = current[fields[i]] as Record<string, unknown>
       }
-      
+
       current[fields[fields.length - 1]] = value
       return updated
     })
   }
-  
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.name?.first?.trim()) {
       newErrors["name.first"] = "First name is required"
     }
@@ -279,19 +279,19 @@ export default function ProfileSettingsPage() {
     if (formData.address?.pincode && !validatePincode(formData.address.pincode)) {
       newErrors["address.pincode"] = "Enter a valid 6-digit pincode"
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
-  
+
   const handleSave = async () => {
     if (!validateForm()) {
       toast.error("Please fix the errors before saving")
       return
     }
-    
+
     if (!user) return
-    
+
     setIsSaving(true)
     try {
       // Prepare update data based on role
@@ -302,82 +302,79 @@ export default function ProfileSettingsPage() {
         address: formData.address,
         preferences: formData.preferences,
       }
-      
+
       if (user.role === "farmer") {
         updateData.farmerProfile = formData.farmerProfile
       } else if (user.role === "expert") {
         updateData.expertProfile = formData.expertProfile
       }
-      
+
+      await updateUserProfile(user.id, updateData)
+
+      // Re-fetch the latest data from the server to confirm the save
       try {
-        await updateUserProfile(user.id, updateData)
-        toast.success("Profile updated successfully")
+        const refreshed = await getUserProfile()
+        setUser(refreshed.data.user)
+        initializeFormData(refreshed.data.user)
       } catch {
-        // Simulate success for demo
-        toast.success("Profile updated successfully")
+        // If the re-fetch fails, keep the current local state — save already succeeded
       }
-      
+
       setHasChanges(false)
+      toast.success("Profile updated successfully")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update profile")
     } finally {
       setIsSaving(false)
     }
   }
-  
+
+
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file || !user) return
-    
-    // Validate file
+
+    // Reset file input so same file can be re-selected if needed
+    if (fileInputRef.current) fileInputRef.current.value = ""
+
+    // Validate file type
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       toast.error("Only JPEG, PNG, and WebP images are allowed")
       return
     }
-    
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size must be less than 5MB")
+
+    // Validate size (2MB limit to match backend config)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image size must be less than 2MB")
       return
     }
-    
+
     setIsUploadingAvatar(true)
     try {
-      try {
-        const response = await uploadAvatar(user.id, file)
-        setUser({ ...user, avatar: { url: response.data.avatarUrl } })
-        toast.success("Avatar updated successfully")
-      } catch {
-        // Simulate for demo
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          setUser({ ...user, avatar: { url: e.target?.result as string } })
-          toast.success("Avatar updated successfully")
-        }
-        reader.readAsDataURL(file)
-      }
+      // Upload to Cloudinary via the backend
+      const response = await uploadAvatar(file)
+      const avatarUrl = response.data.avatar.url
+      setUser({ ...user, avatar: { url: avatarUrl } })
+      toast.success("Profile photo updated successfully")
     } catch (error) {
-      toast.error("Failed to upload avatar")
+      toast.error(error instanceof Error ? error.message : "Failed to upload photo")
     } finally {
       setIsUploadingAvatar(false)
     }
   }
-  
+
   const handleRemoveAvatar = async () => {
     if (!user) return
-    
+
     try {
-      try {
-        await removeAvatar(user.id)
-      } catch {
-        // Simulate for demo
-      }
+      await removeAvatar()
       setUser({ ...user, avatar: undefined })
-      toast.success("Avatar removed")
+      toast.success("Profile photo removed")
     } catch (error) {
-      toast.error("Failed to remove avatar")
+      toast.error(error instanceof Error ? error.message : "Failed to remove photo")
     }
   }
-  
+
   const addCrop = () => {
     if (!newCrop.trim()) return
     const crops = formData.farmerProfile?.crops || []
@@ -386,12 +383,12 @@ export default function ProfileSettingsPage() {
     }
     setNewCrop("")
   }
-  
+
   const removeCrop = (crop: string) => {
     const crops = formData.farmerProfile?.crops || []
     handleInputChange("farmerProfile.crops", crops.filter((c) => c !== crop))
   }
-  
+
   const addSpecialization = () => {
     if (!newSpecialization.trim()) return
     const specs = formData.expertProfile?.specializations || []
@@ -400,12 +397,12 @@ export default function ProfileSettingsPage() {
     }
     setNewSpecialization("")
   }
-  
+
   const removeSpecialization = (spec: string) => {
     const specs = formData.expertProfile?.specializations || []
     handleInputChange("expertProfile.specializations", specs.filter((s) => s !== spec))
   }
-  
+
   if (isLoading) {
     return (
       <div className="container max-w-4xl py-8">
@@ -420,7 +417,7 @@ export default function ProfileSettingsPage() {
       </div>
     )
   }
-  
+
   if (!user) {
     return (
       <div className="container max-w-4xl py-8">
@@ -437,7 +434,7 @@ export default function ProfileSettingsPage() {
       </div>
     )
   }
-  
+
   return (
     <div className="container max-w-4xl py-8">
       {/* Header */}
@@ -465,7 +462,7 @@ export default function ProfileSettingsPage() {
           Save Changes
         </Button>
       </div>
-      
+
       <div className="grid gap-6 md:grid-cols-3">
         {/* Avatar Section */}
         <Card>
@@ -486,7 +483,7 @@ export default function ProfileSettingsPage() {
                 </div>
               )}
             </div>
-            
+
             <input
               ref={fileInputRef}
               type="file"
@@ -494,7 +491,7 @@ export default function ProfileSettingsPage() {
               className="hidden"
               onChange={handleAvatarUpload}
             />
-            
+
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -530,11 +527,11 @@ export default function ProfileSettingsPage() {
                 </AlertDialog>
               )}
             </div>
-            
+
             <p className="mt-3 text-center text-xs text-muted-foreground">
               JPEG, PNG, or WebP. Max 5MB.
             </p>
-            
+
             {/* Verification Status */}
             <Separator className="my-4" />
             <div className="w-full space-y-2">
@@ -543,7 +540,7 @@ export default function ProfileSettingsPage() {
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   Email
                 </span>
-                {user.verification.email.verified ? (
+                {user.verification?.email?.verified ? (
                   <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                     <CheckCircle className="mr-1 h-3 w-3" />
                     Verified
@@ -559,7 +556,7 @@ export default function ProfileSettingsPage() {
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   Phone
                 </span>
-                {user.verification.phone.verified ? (
+                {user.verification?.phone?.verified ? (
                   <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                     <CheckCircle className="mr-1 h-3 w-3" />
                     Verified
@@ -578,21 +575,23 @@ export default function ProfileSettingsPage() {
                 <Badge
                   variant="secondary"
                   className={
-                    user.verification.kyc.status === "approved"
+                    user.verification?.kyc?.status === "approved"
                       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : user.verification.kyc.status === "rejected"
+                      : user.verification?.kyc?.status === "rejected"
                         ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                   }
                 >
-                  {user.verification.kyc.status === "approved" && <CheckCircle className="mr-1 h-3 w-3" />}
-                  {user.verification.kyc.status.charAt(0).toUpperCase() + user.verification.kyc.status.slice(1)}
+                  {user.verification?.kyc?.status === "approved" && <CheckCircle className="mr-1 h-3 w-3" />}
+                  {user.verification?.kyc?.status
+                    ? user.verification.kyc.status.charAt(0).toUpperCase() + user.verification.kyc.status.slice(1)
+                    : "Pending"}
                 </Badge>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Main Form */}
         <Card className="md:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -622,7 +621,7 @@ export default function ProfileSettingsPage() {
                 </TabsTrigger>
               </TabsList>
             </CardHeader>
-            
+
             <CardContent className="pt-6">
               {/* Personal Information Tab */}
               <TabsContent value="personal" className="mt-0 space-y-4">
@@ -654,7 +653,7 @@ export default function ProfileSettingsPage() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <Input
@@ -668,7 +667,7 @@ export default function ProfileSettingsPage() {
                     Email cannot be changed. Contact support if needed.
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input
@@ -684,7 +683,7 @@ export default function ProfileSettingsPage() {
                     <p className="text-xs text-red-500">{errors.phone}</p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="bio">Bio / About</Label>
                   <Textarea
@@ -700,7 +699,7 @@ export default function ProfileSettingsPage() {
                   </p>
                 </div>
               </TabsContent>
-              
+
               {/* Address Tab */}
               <TabsContent value="address" className="mt-0 space-y-4">
                 <div className="space-y-2">
@@ -712,7 +711,7 @@ export default function ProfileSettingsPage() {
                     placeholder="Enter street address"
                   />
                 </div>
-                
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="village">Village</Label>
@@ -733,7 +732,7 @@ export default function ProfileSettingsPage() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="district">District</Label>
@@ -763,7 +762,7 @@ export default function ProfileSettingsPage() {
                     </Select>
                   </div>
                 </div>
-                
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="pincode">Pincode</Label>
@@ -790,7 +789,7 @@ export default function ProfileSettingsPage() {
                   </div>
                 </div>
               </TabsContent>
-              
+
               {/* Role-specific Tab */}
               <TabsContent value="role" className="mt-0 space-y-4">
                 {user.role === "farmer" && (
@@ -827,7 +826,7 @@ export default function ProfileSettingsPage() {
                         </Select>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="farmingType">Farming Type</Label>
                       <Select
@@ -846,7 +845,7 @@ export default function ProfileSettingsPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label>Crops</Label>
                       <div className="flex flex-wrap gap-2 mb-2">
@@ -885,7 +884,7 @@ export default function ProfileSettingsPage() {
                     </div>
                   </>
                 )}
-                
+
                 {user.role === "expert" && (
                   <>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -912,7 +911,7 @@ export default function ProfileSettingsPage() {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label>Specializations</Label>
                       <div className="flex flex-wrap gap-2 mb-2">
@@ -951,7 +950,7 @@ export default function ProfileSettingsPage() {
                     </div>
                   </>
                 )}
-                
+
                 {user.role === "consumer" && (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <User className="mb-4 h-12 w-12 text-muted-foreground" />
@@ -962,7 +961,7 @@ export default function ProfileSettingsPage() {
                   </div>
                 )}
               </TabsContent>
-              
+
               {/* Preferences Tab */}
               <TabsContent value="preferences" className="mt-0 space-y-6">
                 <div className="space-y-4">
@@ -990,12 +989,12 @@ export default function ProfileSettingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div className="space-y-4">
                     <h4 className="font-medium">Notifications</h4>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label htmlFor="emailNotif">Email Notifications</Label>
@@ -1009,7 +1008,7 @@ export default function ProfileSettingsPage() {
                         onCheckedChange={(checked) => handleInputChange("preferences.notifications.email", checked)}
                       />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label htmlFor="smsNotif">SMS Notifications</Label>
@@ -1023,7 +1022,7 @@ export default function ProfileSettingsPage() {
                         onCheckedChange={(checked) => handleInputChange("preferences.notifications.sms", checked)}
                       />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label htmlFor="pushNotif">Push Notifications</Label>
@@ -1038,9 +1037,9 @@ export default function ProfileSettingsPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label htmlFor="newsletter">Newsletter</Label>
@@ -1060,7 +1059,7 @@ export default function ProfileSettingsPage() {
           </Tabs>
         </Card>
       </div>
-      
+
       {/* Quick Links */}
       <Card className="mt-6">
         <CardHeader>
@@ -1082,7 +1081,7 @@ export default function ProfileSettingsPage() {
             </div>
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </Link>
-          
+
           <Link
             href="/dashboard"
             className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted transition-colors"

@@ -74,18 +74,19 @@ import {
 } from "@/lib/market-api"
 
 // Dynamically import map component to avoid SSR issues
+// Cast as ComponentType<any> because next/dynamic loses Leaflet-specific prop types
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
   { ssr: false }
-)
+) as React.ComponentType<any>
 const TileLayer = dynamic(
   () => import("react-leaflet").then((mod) => mod.TileLayer),
   { ssr: false }
-)
+) as React.ComponentType<any>
 const Marker = dynamic(
   () => import("react-leaflet").then((mod) => mod.Marker),
   { ssr: false }
-)
+) as React.ComponentType<any>
 const Popup = dynamic(
   () => import("react-leaflet").then((mod) => mod.Popup),
   { ssr: false }
@@ -223,123 +224,101 @@ function MandiDetailSheet({ mandi, open, onClose }: { mandi: Mandi | null; open:
   if (!mandi) return null
 
   const isOpen = checkIfOpen(mandi)
+  const isGovtData = mandi.source === "GOVT_AGMARKNET"
+
+  // Default operating days for govt data (all 7 days)
+  const displayDays = mandi.operatingDays && mandi.operatingDays.length > 0
+    ? mandi.operatingDays
+    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+  const openTime = mandi.operatingHours?.open || "06:00"
+  const closeTime = mandi.operatingHours?.close || "18:00"
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{mandi.name}</SheetTitle>
-          <SheetDescription>
-            {mandi.district}, {mandi.state}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="mt-6 space-y-6">
-          {/* Status & Type */}
-          <div className="flex items-center gap-2">
-            <Badge variant={isOpen ? "default" : "secondary"} className="text-sm">
-              {isOpen ? "Open Now" : "Closed"}
-            </Badge>
-            <Badge variant="outline">{mandi.type}</Badge>
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold leading-tight">{mandi.name}</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {mandi.district}, {mandi.state}
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Badge variant={isOpen ? "default" : "secondary"} className="text-xs">
+                {isOpen ? "Open Now" : "Closed"}
+              </Badge>
+              {isGovtData && (
+                <Badge variant="outline" className="text-[10px] border-blue-200 text-blue-700 bg-blue-50">
+                  GOVT DATA
+                </Badge>
+              )}
+            </div>
+          </div>
+          {/* Type + Verified badges */}
+          <div className="flex gap-2 mt-2">
+            <Badge variant="outline" className="text-xs">{mandi.type || "APMC"}</Badge>
             {mandi.isVerified && (
-              <Badge variant="secondary" className="gap-1">
-                <CheckCircle className="h-3 w-3" />
-                Verified
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <CheckCircle className="h-3 w-3" /> Verified
+              </Badge>
+            )}
+            {mandi.todayPriceCount != null && mandi.todayPriceCount > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {mandi.todayPriceCount} prices today
               </Badge>
             )}
           </div>
+        </div>
 
-          {/* Operating Hours */}
-          <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Operating Hours
+        <div className="px-6 py-4 space-y-5">
+
+          {/* ── Operating Info ── */}
+          <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+            <h4 className="font-semibold text-sm flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              Operating Information
             </h4>
-            <p className="text-sm text-muted-foreground">
-              {mandi.operatingHours?.open || "06:00"} - {mandi.operatingHours?.close || "18:00"}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {mandi.operatingDays?.map((day) => (
-                <Badge key={day} variant="outline" className="text-xs">
-                  {day.slice(0, 3)}
-                </Badge>
-              ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-background rounded-lg p-3 border">
+                <p className="text-xs text-muted-foreground mb-1">Opens At</p>
+                <p className="font-semibold">{openTime}</p>
+              </div>
+              <div className="bg-background rounded-lg p-3 border">
+                <p className="text-xs text-muted-foreground mb-1">Closes At</p>
+                <p className="font-semibold">{closeTime}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Operating Days</p>
+              <div className="flex flex-wrap gap-1">
+                {displayDays.map((day) => (
+                  <Badge key={day} variant="outline" className="text-xs px-2">
+                    {day.slice(0, 3)}
+                  </Badge>
+                ))}
+              </div>
+              {isGovtData && !mandi.operatingDays?.length && (
+                <p className="text-xs text-muted-foreground mt-1 italic">* Assuming all days (not specified in govt data)</p>
+              )}
             </div>
           </div>
 
-          <Separator />
-
-          {/* Contact Information */}
-          {mandi.contactInfo && (
-            <div>
-              <h4 className="font-medium mb-3">Contact Information</h4>
-              <div className="space-y-2">
-                {mandi.contactInfo.phone && mandi.contactInfo.phone.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${mandi.contactInfo.phone[0]}`} className="text-sm hover:underline">
-                      {mandi.contactInfo.phone.join(", ")}
-                    </a>
-                  </div>
-                )}
-                {mandi.contactInfo.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${mandi.contactInfo.email}`} className="text-sm hover:underline">
-                      {mandi.contactInfo.email}
-                    </a>
-                  </div>
-                )}
-                {mandi.contactInfo.website && (
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a href={mandi.contactInfo.website} target="_blank" rel="noopener noreferrer" className="text-sm hover:underline flex items-center gap-1">
-                      {mandi.contactInfo.website}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
-                {mandi.contactInfo.secretary?.name && (
-                  <div className="mt-3 p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm font-medium">Secretary</p>
-                    <p className="text-sm text-muted-foreground">{mandi.contactInfo.secretary.name}</p>
-                    {mandi.contactInfo.secretary.phone && (
-                      <p className="text-sm text-muted-foreground">{mandi.contactInfo.secretary.phone}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Facilities */}
-          {mandi.facilities && (
-            <div>
-              <h4 className="font-medium mb-3">Facilities</h4>
-              <div className="flex flex-wrap gap-2">
-                <FacilityBadge available={mandi.facilities.coldStorage} icon={Snowflake} label="Cold Storage" />
-                <FacilityBadge available={mandi.facilities.warehouse} icon={Warehouse} label="Warehouse" />
-                <FacilityBadge available={mandi.facilities.parking} icon={Car} label="Parking" />
-                <FacilityBadge available={mandi.facilities.weighbridge} icon={Scale} label="Weighbridge" />
-                <FacilityBadge available={mandi.facilities.bankingFacility} icon={CreditCard} label="Banking" />
-                <FacilityBadge available={mandi.facilities.eNAMEnabled} icon={CheckCircle} label="eNAM" />
-                <FacilityBadge available={mandi.facilities.grading} icon={CheckCircle} label="Grading" />
-                <FacilityBadge available={mandi.facilities.assaying} icon={CheckCircle} label="Assaying" />
-              </div>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Main Commodities */}
+          {/* ── Commodities ── */}
           {mandi.mainCommodities && mandi.mainCommodities.length > 0 && (
             <div>
-              <h4 className="font-medium mb-3">Main Commodities</h4>
+              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <Truck className="h-4 w-4 text-primary" />
+                Commodities Traded
+                <span className="ml-auto text-xs font-normal text-muted-foreground">
+                  {mandi.mainCommodities.length} crops
+                </span>
+              </h4>
               <div className="flex flex-wrap gap-2">
                 {mandi.mainCommodities.map((commodity) => (
-                  <Badge key={commodity} variant="secondary">
+                  <Badge key={commodity} variant="secondary" className="text-xs">
                     {commodity}
                   </Badge>
                 ))}
@@ -347,36 +326,186 @@ function MandiDetailSheet({ mandi, open, onClose }: { mandi: Mandi | null; open:
             </div>
           )}
 
-          {/* Fees */}
+          {/* ── Location ── */}
+          {mandi.location?.coordinates && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Location
+                </h4>
+                <div className="rounded-xl border bg-muted/30 p-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">District</p>
+                      <p className="font-medium">{mandi.district}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">State</p>
+                      <p className="font-medium">{mandi.state}</p>
+                    </div>
+                    {mandi.address?.city && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">City</p>
+                        <p className="font-medium">{mandi.address.city}</p>
+                      </div>
+                    )}
+                    {mandi.address?.pincode && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Pincode</p>
+                        <p className="font-medium">{mandi.address.pincode}</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    📍 {mandi.location.coordinates[1].toFixed(4)}°N, {mandi.location.coordinates[0].toFixed(4)}°E
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Contact Info ── */}
+          {mandi.contactInfo && (mandi.contactInfo.phone?.length || mandi.contactInfo.email || mandi.contactInfo.website) && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="font-semibold text-sm mb-3">Contact Information</h4>
+                <div className="space-y-2">
+                  {mandi.contactInfo.phone && mandi.contactInfo.phone.length > 0 && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={`tel:${mandi.contactInfo.phone[0]}`} className="hover:underline text-primary">
+                        {mandi.contactInfo.phone.join(", ")}
+                      </a>
+                    </div>
+                  )}
+                  {mandi.contactInfo.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={`mailto:${mandi.contactInfo.email}`} className="hover:underline text-primary">
+                        {mandi.contactInfo.email}
+                      </a>
+                    </div>
+                  )}
+                  {mandi.contactInfo.website && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={mandi.contactInfo.website} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary flex items-center gap-1 truncate">
+                        {mandi.contactInfo.website}
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    </div>
+                  )}
+                  {mandi.contactInfo.secretary?.name && (
+                    <div className="mt-2 p-3 rounded-lg bg-muted/50 border">
+                      <p className="text-xs font-medium mb-1">Secretary</p>
+                      <p className="text-sm">{mandi.contactInfo.secretary.name}</p>
+                      {mandi.contactInfo.secretary.phone && (
+                        <p className="text-xs text-muted-foreground">{mandi.contactInfo.secretary.phone}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Facilities ── */}
+          {mandi.facilities && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <Warehouse className="h-4 w-4 text-primary" />
+                  Facilities
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <FacilityBadge available={mandi.facilities.coldStorage} icon={Snowflake} label="Cold Storage" />
+                  <FacilityBadge available={mandi.facilities.warehouse} icon={Warehouse} label="Warehouse" />
+                  <FacilityBadge available={mandi.facilities.parking} icon={Car} label="Parking" />
+                  <FacilityBadge available={mandi.facilities.weighbridge} icon={Scale} label="Weighbridge" />
+                  <FacilityBadge available={mandi.facilities.bankingFacility} icon={CreditCard} label="Banking" />
+                  <FacilityBadge available={mandi.facilities.eNAMEnabled} icon={CheckCircle} label="eNAM" />
+                  <FacilityBadge available={mandi.facilities.grading} icon={CheckCircle} label="Grading" />
+                  <FacilityBadge available={mandi.facilities.assaying} icon={CheckCircle} label="Assaying" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Fees ── */}
           {mandi.fees && (
             <>
               <Separator />
               <div>
-                <h4 className="font-medium mb-3">Fees & Charges</h4>
+                <h4 className="font-semibold text-sm mb-3">Fees & Charges</h4>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-muted/50">
+                  <div className="p-3 rounded-lg bg-muted/50 border">
                     <p className="text-xs text-muted-foreground">Market Fee</p>
-                    <p className="font-medium">{mandi.fees.marketFee}%</p>
+                    <p className="font-semibold">{mandi.fees.marketFee}%</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
+                  <div className="p-3 rounded-lg bg-muted/50 border">
                     <p className="text-xs text-muted-foreground">Commission</p>
-                    <p className="font-medium">{mandi.fees.commissionRate}%</p>
+                    <p className="font-semibold">{mandi.fees.commissionRate}%</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
+                  <div className="p-3 rounded-lg bg-muted/50 border">
                     <p className="text-xs text-muted-foreground">Weighing</p>
-                    <p className="font-medium">₹{mandi.fees.weighingCharges}/qtl</p>
+                    <p className="font-semibold">₹{mandi.fees.weighingCharges}/qtl</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
+                  <div className="p-3 rounded-lg bg-muted/50 border">
                     <p className="text-xs text-muted-foreground">Loading</p>
-                    <p className="font-medium">₹{mandi.fees.loadingCharges}/qtl</p>
+                    <p className="font-semibold">₹{mandi.fees.loadingCharges}/qtl</p>
                   </div>
                 </div>
               </div>
             </>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-2">
+          {/* ── Capacity ── */}
+          {mandi.capacity && (mandi.capacity.dailyArrival || mandi.capacity.shopCount || mandi.capacity.traderCount) && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="font-semibold text-sm mb-3">Capacity</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {mandi.capacity.dailyArrival && (
+                    <div className="p-3 rounded-lg bg-muted/50 border text-center">
+                      <p className="text-xs text-muted-foreground">Daily Arrival</p>
+                      <p className="font-semibold text-sm">{mandi.capacity.dailyArrival}</p>
+                      <p className="text-xs text-muted-foreground">tons</p>
+                    </div>
+                  )}
+                  {mandi.capacity.shopCount && (
+                    <div className="p-3 rounded-lg bg-muted/50 border text-center">
+                      <p className="text-xs text-muted-foreground">Shops</p>
+                      <p className="font-semibold text-sm">{mandi.capacity.shopCount}</p>
+                    </div>
+                  )}
+                  {mandi.capacity.traderCount && (
+                    <div className="p-3 rounded-lg bg-muted/50 border text-center">
+                      <p className="text-xs text-muted-foreground">Traders</p>
+                      <p className="font-semibold text-sm">{mandi.capacity.traderCount}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Data Source Note (for govt data) ── */}
+          {isGovtData && (
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3">
+              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-0.5">📊 Data Source</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                Price data sourced from Agmarknet (Government of India). Contact details and facilities information may not be available for all markets.
+              </p>
+            </div>
+          )}
+
+          {/* ── Actions ── */}
+          <div className="flex gap-2 pt-2 pb-2">
             {mandi.location?.coordinates && (
               <Button className="flex-1" asChild>
                 <a
@@ -389,7 +518,7 @@ function MandiDetailSheet({ mandi, open, onClose }: { mandi: Mandi | null; open:
                 </a>
               </Button>
             )}
-            <Button variant="outline" asChild>
+            <Button variant="outline" className={mandi.location?.coordinates ? "" : "flex-1"} asChild>
               <Link href={`/dashboard/market-prices?mandi=${mandi._id}`}>
                 View Prices
               </Link>
@@ -401,21 +530,47 @@ function MandiDetailSheet({ mandi, open, onClose }: { mandi: Mandi | null; open:
   )
 }
 
+
+
 function checkIfOpen(mandi: Mandi): boolean {
+
+  // Use Intl.DateTimeFormat with Asia/Kolkata to get correct IST time
+  // on any machine regardless of system timezone
   const now = new Date()
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-  const today = dayNames[now.getDay()]
+  const istParts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now)
 
-  if (!mandi.operatingDays?.includes(today)) return false
+  const weekday = istParts.find((p) => p.type === "weekday")?.value ?? ""
+  const hour = parseInt(istParts.find((p) => p.type === "hour")?.value ?? "0", 10)
+  const minute = parseInt(istParts.find((p) => p.type === "minute")?.value ?? "0", 10)
+  const currentTime = hour * 100 + minute
 
-  const currentTime = now.getHours() * 100 + now.getMinutes()
-  const openTime = parseInt((mandi.operatingHours?.open || "06:00").replace(":", ""))
-  const closeTime = parseInt((mandi.operatingHours?.close || "18:00").replace(":", ""))
+  // Default to all 7 days when API doesn't provide operatingDays
+  // (Agmarknet govt data never includes this field)
+  const activeDays =
+    mandi.operatingDays && mandi.operatingDays.length > 0
+      ? mandi.operatingDays
+      : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+  if (!activeDays.includes(weekday)) return false
+
+  // Default hours 06:00–20:00 if not specified
+  const openStr = mandi.operatingHours?.open || "06:00"
+  const closeStr = mandi.operatingHours?.close || "20:00"
+  const openTime = parseInt(openStr.replace(":", ""), 10)
+  const closeTime = parseInt(closeStr.replace(":", ""), 10)
 
   return currentTime >= openTime && currentTime <= closeTime
 }
 
 const Loading = () => null
+
+const PAGE_SIZE = 20
 
 export default function MandiFinderPage() {
   const [mandis, setMandis] = useState<Mandi[]>([])
@@ -426,6 +581,8 @@ export default function MandiFinderPage() {
   const [locationLoading, setLocationLoading] = useState(false)
   const [selectedMandi, setSelectedMandi] = useState<Mandi | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [dataSource, setDataSource] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
   // Filters
   const [search, setSearch] = useState("")
@@ -439,9 +596,7 @@ export default function MandiFinderPage() {
       if (showRefresh) setRefreshing(true)
       else setLoading(true)
 
-      const params: Record<string, string | number> = {
-        limit: 2000,
-      }
+      const params: Record<string, string | number> = {}
 
       if (state && state !== "all") params.state = state
       if (search) params.search = search
@@ -452,13 +607,13 @@ export default function MandiFinderPage() {
       }
 
       const response = await mandiApi.getList(params)
-      setMandis(response.data)
-      setMandis(response.data)
+      setMandis(response.data ?? [])
+      setDataSource(response.source ?? null)
+      setPage(1)
     } catch (error) {
-      console.log("[v0] Error fetching mandis:", error)
-      // DO NOT fallback to mock data to force real API debugging
-      // setMandis([]) 
-      // alert("Failed to fetch real-time mandi data. Please ensure backend server is restarted.")
+      console.error("[MandiFinder] Error fetching mandis:", error)
+      setMandis([])
+      setDataSource(null)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -468,6 +623,9 @@ export default function MandiFinderPage() {
   useEffect(() => {
     fetchMandis()
   }, [fetchMandis])
+
+  // Reset pagination whenever filters or data changes
+  useEffect(() => { setPage(1) }, [state, search, userLocation, radius])
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
@@ -627,17 +785,20 @@ export default function MandiFinderPage() {
           </CardContent>
         </Card>
 
-        {/* Results count */}
-        <div className="flex items-center justify-between">
+        {/* Results count + source badge */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
             Found {sortedMandis.length} mandis
           </p>
+          {dataSource === "live" && <Badge variant="outline" className="text-[10px] h-5 border-green-300 text-green-700 bg-green-50">🟢 Live Govt Data (Agmarknet)</Badge>}
+          {dataSource === "cache" && <Badge variant="outline" className="text-[10px] h-5 border-blue-200 text-blue-700 bg-blue-50">⚡ Cached Govt Data (10 min)</Badge>}
+          {dataSource === "fallback" && <Badge variant="outline" className="text-[10px] h-5 border-yellow-300 text-yellow-700 bg-yellow-50">🟡 Offline Cache (API unavailable)</Badge>}
         </div>
 
         {loading ? (
           <MandiSkeleton />
         ) : view === "list" ? (
-          /* List View */
+          /* List View — paginated */
           <div className="space-y-4">
             {sortedMandis.length === 0 ? (
               <Card>
@@ -650,14 +811,27 @@ export default function MandiFinderPage() {
                 </CardContent>
               </Card>
             ) : (
-              sortedMandis.map((mandi) => (
-                <MandiCard
-                  key={mandi._id}
-                  mandi={mandi}
-                  userLocation={userLocation}
-                  onSelect={() => handleSelectMandi(mandi)}
-                />
-              ))
+              <>
+                {sortedMandis.slice(0, page * PAGE_SIZE).map((mandi) => (
+                  <MandiCard
+                    key={mandi._id}
+                    mandi={mandi}
+                    userLocation={userLocation}
+                    onSelect={() => handleSelectMandi(mandi)}
+                  />
+                ))}
+                {page * PAGE_SIZE < sortedMandis.length && (
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setPage(p => p + 1)}
+                    >
+                      Show {Math.min(PAGE_SIZE, sortedMandis.length - page * PAGE_SIZE)} more mandis
+                      ({sortedMandis.length - page * PAGE_SIZE} remaining)
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ) : (
@@ -673,6 +847,7 @@ export default function MandiFinderPage() {
                       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
                       crossOrigin=""
                     />
+                    {/* MapContainer center error suppressed via ComponentType<any> cast above */}
                     <MapContainer
                       center={userLocation ? [userLocation.lat, userLocation.lng] : [20.5937, 78.9629]}
                       zoom={userLocation ? 10 : 5}
@@ -729,8 +904,8 @@ export default function MandiFinderPage() {
   )
 }
 
-// Generate mock mandi data
-function generateMockMandis(stateFilter: string, userLocation: UserLocation | null): Mandi[] {
+// generateMockMandis removed — real data served from /api/v1/mandi/list
+function _generateMockMandis_REMOVED(stateFilter: string, userLocation: UserLocation | null): Mandi[] {
   const mandisData = [
     { name: "Azadpur Mandi", state: "Delhi", district: "North Delhi", lat: 28.7041, lng: 77.1025 },
     { name: "Vashi APMC", state: "Maharashtra", district: "Navi Mumbai", lat: 19.0760, lng: 72.9988 },

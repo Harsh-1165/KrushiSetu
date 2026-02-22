@@ -17,20 +17,7 @@ import {
   Target,
   ShieldCheck,
 } from "lucide-react"
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-  ReferenceLine,
-  ComposedChart,
-} from "recharts"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -53,6 +40,11 @@ import {
 } from "@/components/ui/tooltip"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
 
 import {
   priceApi,
@@ -233,6 +225,7 @@ export default function PricePredictionsPage() {
   const [predictionData, setPredictionData] = useState<PredictionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [isFallback, setIsFallback] = useState(false)
 
   const fetchPredictions = useCallback(async (showRefresh = false) => {
     try {
@@ -244,13 +237,15 @@ export default function PricePredictionsPage() {
         state: state || undefined,
         days,
       })
-
-      setPredictionData(response.data)
+      const payload = response.data as PredictionData
+      setPredictionData(payload)
+      setIsFallback(false) // Real data received
     } catch (error) {
-      console.log("[v0] Error fetching predictions:", error)
-      // Generate mock data for demonstration
-      const mockData = generateMockPredictionData(crop, state, days)
-      setPredictionData(mockData)
+      console.warn("[GreenTrace] Predictions API unavailable — showing estimated fallback data. This is NOT real AI output.", error)
+      // Generate estimated data as fallback — clearly flagged in UI
+      const fallbackData = generateMockPredictionData(crop, state, days)
+      setPredictionData(fallbackData)
+      setIsFallback(true)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -346,6 +341,19 @@ export default function PricePredictionsPage() {
         <PredictionSkeleton />
       ) : (
         <>
+          {/* Fallback Warning Banner */}
+          {isFallback && (
+            <div className="flex items-center gap-3 rounded-lg border border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-950/30 px-4 py-3">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-600 dark:text-yellow-400" />
+              <div>
+                <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">⚠️ Estimated Data — Fallback Mode</p>
+                <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-0.5">
+                  The AI prediction service is currently unavailable. Prices shown are <strong>estimated illustrations only</strong> and should not be used for real trading decisions.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
@@ -451,82 +459,53 @@ export default function PricePredictionsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px] w-full">
+              <div className="h-[400px] w-full min-h-[400px]">
                 {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <TooltipProvider>
-                      <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorPrediction" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                        <XAxis
-                          dataKey="date"
-                          tick={{ fontSize: 12 }}
-                          tickLine={false}
-                          axisLine={false}
-                          minTickGap={30}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 12 }}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(value) => `₹${value}`}
-                          domain={['auto', 'auto']}
-                        />
-                        <Tooltip content={<CustomPredictionTooltip />} />
-                        <Legend wrapperStyle={{ paddingTop: "20px" }} />
-
-                        {/* Confidence band */}
-                        <Area
-                          type="monotone"
-                          dataKey="upperBound"
-                          stackId="1"
-                          stroke="none"
-                          fill="url(#colorPrediction)"
-                          name="Upper Bound"
-                          connectNulls={true}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="lowerBound"
-                          stackId="2"
-                          stroke="none"
-                          fill="transparent"
-                          name="Lower Bound"
-                          connectNulls={true}
-                        />
-
-                        {/* Historical line */}
-                        <Line
-                          type="monotone"
-                          dataKey="historical"
-                          name="Historical"
-                          stroke="hsl(var(--muted-foreground))"
-                          strokeWidth={2}
-                          dot={{ r: 4, fill: "hsl(var(--muted-foreground))" }}
-                          activeDot={{ r: 6 }}
-                          connectNulls={true}
-                        />
-
-                        {/* Prediction line */}
-                        <Line
-                          type="monotone"
-                          dataKey="predicted"
-                          name="Predicted"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          strokeDasharray="5 5"
-                          dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                          activeDot={{ r: 6 }}
-                          connectNulls={true}
-                        />
-                      </ComposedChart>
-                    </TooltipProvider>
-                  </ResponsiveContainer>
+                  <ChartContainer
+                    config={{
+                      historical: { label: "Historical", color: "hsl(215 20% 65%)" },
+                      predicted: { label: "Predicted", color: "hsl(142 71% 45%)" },
+                    }}
+                    className="h-full w-full"
+                  >
+                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tickLine={false}
+                        axisLine={false}
+                        className="text-xs"
+                        minTickGap={24}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        className="text-xs"
+                        tickFormatter={(value) => `₹${value}`}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="historical"
+                        name="Historical"
+                        stroke="hsl(215 20% 65%)"
+                        strokeWidth={2}
+                        dot={{ r: 3, fill: "hsl(215 20% 65%)" }}
+                        connectNulls
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="predicted"
+                        name="Predicted"
+                        stroke="hsl(142 71% 45%)"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ r: 3, fill: "hsl(142 71% 45%)" }}
+                        connectNulls
+                      />
+                    </LineChart>
+                  </ChartContainer>
                 ) : (
                   <div className="flex h-full items-center justify-center flex-col gap-2 text-muted-foreground">
                     <Sparkles className="h-8 w-8 opacity-20" />
@@ -602,40 +581,47 @@ function buildChartData(data: PredictionData) {
     type: "historical" | "predicted"
   }> = []
 
-  // Add historical data points
-  const historyData = data.history || [];
+  const historyData = Array.isArray(data.history) ? data.history : []
+  const predictions = Array.isArray(data.predictions) ? data.predictions : []
 
+  // Add historical data points (support both modalPrice and priceDate from API)
   if (historyData.length > 0) {
-    historyData.forEach((item) => {
+    historyData.forEach((item: Record<string, unknown>) => {
+      const priceDate = item.priceDate != null ? item.priceDate : item.date
+      const price = Number(item.modalPrice ?? item.price ?? 0) || 2000
+      if (!priceDate) return
       chartData.push({
-        date: new Date(item.priceDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
-        historical: item.modalPrice,
-        price: item.modalPrice,
+        date: new Date(priceDate as string | number).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+        historical: price,
+        price,
         type: "historical",
       })
-    });
-  } else {
-    // Fallback if no history (should not happen with synthetic data)
-    const basePrice = data.predictions[0]?.predictedPrice || 2000
+    })
+  }
+
+  // Fallback synthetic history if none
+  if (chartData.length === 0) {
+    const basePrice = predictions[0] && typeof (predictions[0] as { predictedPrice?: number }).predictedPrice === "number"
+      ? (predictions[0] as { predictedPrice: number }).predictedPrice
+      : 2000
     for (let i = 7; i >= 1; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
+      const d = new Date()
+      d.setDate(d.getDate() - i)
       const variance = (Math.random() - 0.5) * 100
       const price = basePrice + variance - (i * 10)
       chartData.push({
-        date: date.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+        date: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
         historical: price,
-        price: price,
+        price,
         type: "historical",
       })
     }
   }
 
-  // Get latest price for "Today" point
-  const lastHistoryItem = chartData[chartData.length - 1];
-  const currentPrice = lastHistoryItem?.price || data.predictions[0]?.predictedPrice || 2000;
+  const lastHistoryItem = chartData[chartData.length - 1]
+  const currentPrice = lastHistoryItem?.price ?? (predictions[0] as { predictedPrice?: number } | undefined)?.predictedPrice ?? 2000
 
-  // Add today
+  // Add today (bridge point)
   chartData.push({
     date: "Today",
     historical: currentPrice,
@@ -644,15 +630,25 @@ function buildChartData(data: PredictionData) {
     type: "historical",
   })
 
-  // Add predictions
-  data.predictions.forEach((pred, index) => {
-    const range = pred.confidenceRange || { low: pred.predictedPrice * 0.95, high: pred.predictedPrice * 1.05 }
+  // Add prediction points
+  type PredPoint = {
+    predictedPrice?: number
+    price?: number
+    date?: string
+    confidenceRange?: { low?: number; high?: number }
+  }
+  predictions.forEach((pred: PredPoint) => {
+    const predPrice = Number(pred.predictedPrice ?? pred.price ?? 0) || currentPrice
+    const rawRange = pred.confidenceRange
+    const rangeLow = rawRange?.low ?? predPrice * 0.95
+    const rangeHigh = rawRange?.high ?? predPrice * 1.05
+    const predDate = pred.date ?? new Date().toISOString().split("T")[0]
     chartData.push({
-      date: new Date(pred.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
-      predicted: pred.predictedPrice,
-      upperBound: range.high,
-      lowerBound: range.low,
-      confidenceRange: range,
+      date: new Date(predDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      predicted: predPrice,
+      upperBound: rangeHigh,
+      lowerBound: rangeLow,
+      confidenceRange: { low: rangeLow, high: rangeHigh },
       type: "predicted",
     })
   })
@@ -660,11 +656,22 @@ function buildChartData(data: PredictionData) {
   return chartData
 }
 
-// Generate mock data for demonstration
+// Generate mock data for demonstration (matches backend shape so chart always has data)
 function generateMockPredictionData(crop: string, state: string, days: number): PredictionData {
   const basePrice = Math.random() * 1500 + 1500
   const trend = Math.random() > 0.5 ? 1 : -1
   const trendStrength = Math.random() * 0.02
+
+  const history: Array<{ priceDate: string; modalPrice: number }> = []
+  for (let i = 14; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    const variance = (Math.random() - 0.5) * 80
+    history.push({
+      priceDate: d.toISOString().split("T")[0],
+      modalPrice: Math.round(basePrice + variance - (i * 5)),
+    })
+  }
 
   const predictions = []
   for (let i = 1; i <= days; i++) {
@@ -696,6 +703,7 @@ function generateMockPredictionData(crop: string, state: string, days: number): 
     location: state || "All India",
     predictionDays: days,
     predictions,
+    history,
     confidence: {
       level: confidenceLevel,
       score: confidenceScore,

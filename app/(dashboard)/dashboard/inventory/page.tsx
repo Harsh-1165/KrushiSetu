@@ -382,8 +382,10 @@ function ProductCard({ product, onRestock }: { product: any, onRestock: () => vo
                     <Eye className="h-4 w-4" />
                   </Link>
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                  <Edit className="h-4 w-4" />
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" asChild>
+                  <Link href={`/dashboard/add-product?edit=${product._id}`}>
+                    <Edit className="h-4 w-4" />
+                  </Link>
                 </Button>
               </div>
             </div>

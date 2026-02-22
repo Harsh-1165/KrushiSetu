@@ -402,6 +402,20 @@ function MarketPricesContent() {
         const response = await priceApi.getAll(params)
         data = response.data
         setPagination(response.pagination)
+
+        // Smart auto-switch: if MongoDB has no data, fall back to live Agmarknet
+        if (data.length === 0) {
+          console.info("[GreenTrace] No prices in local DB — switching to Live Govt. Market Prices (Agmarknet)")
+          const realTimeResponse = await priceApi.getRealTimePrices({
+            state: state || undefined,
+            commodity: crop || undefined,
+            limit: 100
+          })
+          data = realTimeResponse.data
+          total = realTimeResponse.count
+          setPagination({ page: 1, limit: 100, total, pages: 1, hasMore: false })
+          setIsRealTime(true) // Reflect state in UI toggle
+        }
       }
 
       setPrices(data)
@@ -423,12 +437,13 @@ function MarketPricesContent() {
       }
 
     } catch (error) {
-      console.log("[v0] Error fetching prices:", error)
+      console.log("Error fetching prices:", error)
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
   }, [page, crop, state, sortBy, sortOrder, minPrice, maxPrice, isRealTime])
+
 
   useEffect(() => {
     fetchPrices()
@@ -472,7 +487,7 @@ function MarketPricesContent() {
       document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
     } catch (error) {
-      console.log("[v0] Error exporting CSV:", error)
+      console.log("Error exporting CSV:", error)
     }
   }
 

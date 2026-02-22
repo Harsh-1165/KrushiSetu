@@ -7,7 +7,6 @@ const nodemailer = require("nodemailer")
 const handlebars = require("handlebars")
 const path = require("path")
 const fs = require("fs").promises
-const Queue = require("bull")
 const logger = require("../utils/logger")
 
 // ===========================================
@@ -99,60 +98,8 @@ class EmailService {
       throw error
     }
 
-    // Initialize email queue with Redis - ONLY if explicitly configured
-    // FORCE DISABLED FOR STABILITY DEBUGGING
-    if (false && process.env.REDIS_URL && process.env.REDIS_URL.startsWith("redis://")) {
-      logger.info(`Initializing email queue with Redis at ${process.env.REDIS_URL.split("@")[1] || "..."}`)
-      try {
-        this.queue = new Queue("email-queue", process.env.REDIS_URL, {
-          defaultJobOptions: {
-            attempts: 3,
-            backoff: {
-              type: "exponential",
-              delay: 5000, // Start with 5 seconds
-            },
-            removeOnComplete: 100, // Keep last 100 completed jobs
-            removeOnFail: 50, // Keep last 50 failed jobs
-          },
-          // Prevent ioredis from crashing the app on connection failure
-          redis: {
-            maxRetriesPerRequest: 3,
-            retryStrategy: (times) => {
-              if (times > 3) {
-                logger.error("Redis connection failed too many times. Disabling queue.")
-                return null // Stop retrying
-              }
-              return Math.min(times * 50, 2000)
-            }
-          }
-        })
-
-        // Process queue
-        this.queue.process(5, async (job) => {
-          return this.processEmailJob(job)
-        })
-
-        // Queue event handlers
-        this.queue.on("completed", (job) => {
-          logger.info(`Email sent successfully: ${job.id}`)
-        })
-
-        this.queue.on("failed", (job, err) => {
-          logger.error(`Email failed: ${job.id}`, err)
-        })
-
-        this.queue.on("error", (err) => {
-          logger.error("Queue error:", err)
-        })
-
-        logger.info("Email queue initialized")
-      } catch (err) {
-        logger.error("Failed to initialize email queue:", err)
-        this.queue = null
-      }
-    } else {
-      logger.info("Redis not configured. Email queue disabled (Direct sending mode).")
-    }
+    // Queue always disabled — Redis removed. Using direct send mode.
+    logger.info("Email queue disabled — using direct send mode.")
 
     // Register Handlebars helpers
     this.registerHelpers()
@@ -576,75 +523,6 @@ class EmailService {
     })
   }
 
-  // ===========================================
-  // QUEUE MANAGEMENT
-  // ===========================================
-
-  /**
-   * Get queue statistics
-   */
-  async getQueueStats() {
-    if (!this.queue) {
-      return { message: "Queue not initialized" }
-    }
-
-    const [waiting, active, completed, failed, delayed] = await Promise.all([
-      this.queue.getWaitingCount(),
-      this.queue.getActiveCount(),
-      this.queue.getCompletedCount(),
-      this.queue.getFailedCount(),
-      this.queue.getDelayedCount(),
-    ])
-
-    return { waiting, active, completed, failed, delayed }
-  }
-
-  /**
-   * Retry failed jobs
-   */
-  async retryFailedJobs() {
-    if (!this.queue) return { message: "Queue not initialized" }
-
-    const failed = await this.queue.getFailed()
-    let retried = 0
-
-    for (const job of failed) {
-      await job.retry()
-      retried++
-    }
-
-    return { retried }
-  }
-
-  /**
-   * Clean old jobs
-   */
-  async cleanOldJobs(olderThanMs = 7 * 24 * 60 * 60 * 1000) {
-    if (!this.queue) return { message: "Queue not initialized" }
-
-    await this.queue.clean(olderThanMs, "completed")
-    await this.queue.clean(olderThanMs, "failed")
-
-    return { cleaned: true }
-  }
-
-  /**
-   * Pause queue
-   */
-  async pauseQueue() {
-    if (!this.queue) return { message: "Queue not initialized" }
-    await this.queue.pause()
-    return { paused: true }
-  }
-
-  /**
-   * Resume queue
-   */
-  async resumeQueue() {
-    if (!this.queue) return { message: "Queue not initialized" }
-    await this.queue.resume()
-    return { resumed: true }
-  }
 }
 
 // Export singleton instance
