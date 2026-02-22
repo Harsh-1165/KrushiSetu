@@ -26,3 +26,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 node_modules/*
+
+backend/ml/models/
+backend/ml/dataset/
+*.h5
+*.pkl
+*.joblib
