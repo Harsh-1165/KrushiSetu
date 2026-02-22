@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=30&pause=1000&color=22C55E&center=true&vCenter=true&width=600&lines=🌱+KrushiSetu;India's+Farm-to-Market+Platform;AI+%2B+Market+Intelligence+%2B+Advisory" alt="Typing SVG" />
+# 🌱 KrushiSetu
+### India's Smartest Farm-to-Market Platform
 
 <br/>
 
@@ -47,46 +48,29 @@ KrushiSetu fixes ALL of this in ONE platform.
 ## 🗺️ Platform Architecture
 
 ```mermaid
-graph TB
-    subgraph CLIENT["🖥️ Client Layer (Next.js 16)"]
-        A[👨‍🌾 Farmer UI] 
-        B[🔬 Expert UI]
-        C[🛒 Consumer UI]
-    end
+graph LR
+    U1["👨‍🌾 Farmer"] --> FE
+    U2["🔬 Expert"] --> FE
+    U3["🛒 Consumer"] --> FE
 
-    subgraph API["⚡ API Layer (Node.js/Express)"]
-        D[Auth & Users]
-        E[Marketplace]
-        F[Mandi Prices]
-        G[AI Advisory]
-        H[Q&A System]
-        I[Knowledge Hub]
-    end
+    FE["🖥️ Next.js Frontend"] --> BE
 
-    subgraph ML["🤖 ML Engine (Python)"]
-        J[Crop Disease CNN]
-        K[Soil Analysis RF]
-    end
+    BE["⚡ Express API"] --> AUTH["🔐 Auth & Users"]
+    BE --> MKT["🛒 Marketplace"]
+    BE --> MANDI["📊 Mandi Prices"]
+    BE --> AI["🤖 AI Advisory"]
+    BE --> QA["💬 Q&A System"]
 
-    subgraph SERVICES["🔌 External Services"]
-        L[Agmarknet API]
-        M[Twilio SMS]
-        N[Firebase Push]
-        O[Cloudinary CDN]
-        P[Nodemailer Email]
-    end
+    AI --> ML["🐍 Python ML Engine"]
+    MANDI --> AGM["📡 Agmarknet API"]
 
-    subgraph DB["🗄️ Data Layer"]
-        Q[(MongoDB Atlas\n17 Collections)]
-    end
+    BE --> DB[("🗄️ MongoDB Atlas")]
+    BE --> CLOUD["☁️ Cloudinary CDN"]
+    BE --> NOTIFY["🔔 Notifications"]  
 
-    A & B & C --> D & E & F & G & H & I
-    G --> J & K
-    F --> L
-    H --> Q
-    E --> O
-    D --> M & N & P
-    API --> Q
+    NOTIFY --> SMS["📱 Twilio SMS"]
+    NOTIFY --> PUSH["🔥 Firebase Push"]
+    NOTIFY --> EMAIL["📧 Nodemailer"]
 ```
 
 ---
@@ -167,38 +151,14 @@ Verified agronomists answer farmer questions. Knowledge Hub with articles, guide
 
 ## 🏗️ Tech Stack Breakdown
 
-```mermaid
-mindmap
-  root((KrushiSetu))
-    Frontend
-      Next.js 16 App Router
-      TypeScript
-      Tailwind CSS
-      Framer Motion
-      Recharts
-      SWR Data Fetching
-      Radix UI Primitives
-    Backend
-      Node.js + Express
-      JWT Auth
-      Mongoose ODM
-      Winston Logging
-      Circuit Breaker
-      Rate Limiting
-    ML Engine
-      TensorFlow / Keras
-      Scikit-learn
-      Python 3.10+
-      CNN Architecture
-      Random Forest
-    Cloud & Services
-      MongoDB Atlas
-      Cloudinary CDN
-      Twilio SMS
-      Firebase Push
-      Nodemailer Email
-      Agmarknet API
-```
+| Layer | Technologies |
+|---|---|
+| 🖥️ **Frontend** | Next.js 16, TypeScript, Tailwind CSS, Framer Motion, Recharts, SWR, Radix UI |
+| ⚡ **Backend** | Node.js, Express.js, JWT, Mongoose, Winston, Circuit Breaker, Rate Limiting |
+| 🤖 **ML Engine** | Python 3.10, TensorFlow/Keras, Scikit-learn, CNN, Random Forest |
+| ☁️ **Cloud** | MongoDB Atlas, Cloudinary CDN, Vercel, Firebase |
+| 🔔 **Notifications** | Twilio SMS, Firebase Push (FCM), Nodemailer Email |
+| 📡 **APIs** | Agmarknet (live prices), Google Generative AI |
 
 ---
 
