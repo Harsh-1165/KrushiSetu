@@ -1,74 +1,163 @@
 <div align="center">
 
-<img src="public/placeholder-logo.svg" alt="KrushiSetu Logo" width="100" height="100"/>
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=30&pause=1000&color=22C55E&center=true&vCenter=true&width=600&lines=🌱+KrushiSetu;India's+Farm-to-Market+Platform;AI+%2B+Market+Intelligence+%2B+Advisory" alt="Typing SVG" />
 
-# 🌱 KrushiSetu
-### India's Smartest Farm-to-Market Platform
+<br/>
 
-*Empowering 50,000+ farmers with AI, real-time market intelligence & expert advisory*
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb)](https://mongodb.com/)
+[![Python](https://img.shields.io/badge/Python-ML_Engine-3776AB?style=for-the-badge&logo=python)](https://python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://typescriptlang.org/)
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js)](https://nodejs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb)](https://mongodb.com/)
-[![Python](https://img.shields.io/badge/Python-ML-3776AB?logo=python)](https://python.org/)
-[![Gemini AI](https://img.shields.io/badge/Google-Gemini_AI-4285F4?logo=google)](https://deepmind.google/technologies/gemini/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<br/>
 
-[🚀 Live Demo](#) · [📖 Documentation](PROJECT.md) · [🐛 Report Bug](https://github.com/Harsh-1165/Krushisetu/issues) · [💡 Request Feature](https://github.com/Harsh-1165/Krushisetu/issues)
+> **🌾 Empowering Indian Farmers with AI, Real-Time Market Intelligence & Expert Advisory**
+
+[🚀 Live Demo](#) · [📖 Full Docs](PROJECT.md) · [🐛 Report Bug](https://github.com/Harsh-1165/KrushiSetu/issues) · [⭐ Star this repo](#)
+
+<br/>
+
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=Harsh-1165.KrushiSetu)
+[![GitHub Stars](https://img.shields.io/github/stars/Harsh-1165/KrushiSetu?style=social)](https://github.com/Harsh-1165/KrushiSetu/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Harsh-1165/KrushiSetu?style=social)](https://github.com/Harsh-1165/KrushiSetu/fork)
 
 </div>
 
 ---
 
-## 🎯 What is KrushiSetu?
+## 🧭 The Problem We're Solving
 
-KrushiSetu (meaning *"Bridge for Farmers"* in Hindi) is a **full-stack agricultural intelligence platform** built for the Indian farming ecosystem. It bridges the gap between farmers, agricultural experts, consumers, and real-time market data — all in one integrated platform powered by AI.
+```
+Indian farmers lose ₹92,651 Crore annually due to:
+┌────────────────────────────────────────────────────────────┐
+│  🔴 Middlemen taking 40-60% of actual sale price           │
+│  🔴 35% crop loss due to undetected diseases               │  
+│  🔴 No access to real-time mandi prices before harvest     │
+│  🔴 Agricultural experts unreachable in rural areas        │
+│  🔴 Information asymmetry exploited by traders             │
+└────────────────────────────────────────────────────────────┘
 
-> **Problem:** Indian farmers lose ₹92,651 crore annually due to lack of market access, crop disease detection delays, and information asymmetry.  
-> **Solution:** A unified digital platform that gives every farmer the tools previously available only to large agribusinesses.
+KrushiSetu fixes ALL of this in ONE platform.
+```
 
 ---
 
-## ✨ Key Features
+## 🗺️ Platform Architecture
+
+```mermaid
+graph TB
+    subgraph CLIENT["🖥️ Client Layer (Next.js 16)"]
+        A[👨‍🌾 Farmer UI] 
+        B[🔬 Expert UI]
+        C[🛒 Consumer UI]
+    end
+
+    subgraph API["⚡ API Layer (Node.js/Express)"]
+        D[Auth & Users]
+        E[Marketplace]
+        F[Mandi Prices]
+        G[AI Advisory]
+        H[Q&A System]
+        I[Knowledge Hub]
+    end
+
+    subgraph ML["🤖 ML Engine (Python)"]
+        J[Crop Disease CNN]
+        K[Soil Analysis RF]
+    end
+
+    subgraph SERVICES["🔌 External Services"]
+        L[Agmarknet API]
+        M[Twilio SMS]
+        N[Firebase Push]
+        O[Cloudinary CDN]
+        P[Nodemailer Email]
+    end
+
+    subgraph DB["🗄️ Data Layer"]
+        Q[(MongoDB Atlas\n17 Collections)]
+    end
+
+    A & B & C --> D & E & F & G & H & I
+    G --> J & K
+    F --> L
+    H --> Q
+    E --> O
+    D --> M & N & P
+    API --> Q
+```
+
+---
+
+## 🔄 User Journey Flow
+
+```mermaid
+sequenceDiagram
+    actor Farmer
+    actor Expert
+    participant App as KrushiSetu
+    participant AI as ML Engine
+    participant Mandi as Agmarknet API
+    participant Buyer
+
+    Farmer->>App: Upload crop photo
+    App->>AI: Send image for diagnosis
+    AI-->>App: Disease detected + treatment plan
+    App-->>Farmer: ⚡ Instant diagnosis in <2s
+
+    Farmer->>App: Check mandi prices
+    App->>Mandi: Fetch live commodity data
+    Mandi-->>App: Real-time prices
+    App-->>Farmer: 📊 Price trends + best mandi
+
+    Farmer->>App: List produce for sale
+    Buyer->>App: Browse & purchase
+    App-->>Farmer: 💰 Order with escrow protection
+
+    Farmer->>App: Post farming question
+    Expert->>App: Answer with expertise
+    App-->>Farmer: ✅ Expert-verified advice
+```
+
+---
+
+## ✨ Feature Showcase
 
 <table>
 <tr>
-<td width="50%">
+<td align="center" width="25%">
 
-### 🤖 AI-Powered Crop Advisory
-- Upload crop/soil images → instant disease detection
-- Powered by custom-trained ML models (TensorFlow/Scikit-learn)
-- Gemini AI for natural language farm guidance
-- Treatment recommendations with dosage & cost
+### 🤖 AI Diagnosis
+**Instant** crop & soil disease detection using custom-trained CNN models.
+Upload a photo → get diagnosis + treatment in **under 2 seconds**.
 
-</td>
-<td width="50%">
-
-### 📊 Live Mandi Price Intelligence
-- Real-time vegetable & crop prices from Agmarknet API
-- Interactive price trend charts & predictions
-- Custom price alerts via SMS/Email/Push
-- Compare prices across mandis
+`TensorFlow` `Scikit-learn` `Python`
 
 </td>
-</tr>
-<tr>
-<td width="50%">
+<td align="center" width="25%">
 
-### 🛒 Agricultural Marketplace
-- Direct farmer-to-consumer/business sales
-- Escrow-protected secure transactions
-- Organic certification badges
-- GPS-based nearby product discovery
+### 📊 Live Mandi Prices
+Real-time commodity prices from **Agmarknet** with trend charts, price predictions and **custom SMS alerts**.
+
+`Recharts` `Agmarknet API` `Twilio`
 
 </td>
-<td width="50%">
+<td align="center" width="25%">
 
-### 👨‍🌾 Expert Advisory Network
-- Q&A with verified agricultural scientists
-- Knowledge Hub — articles, tips, crop guides
-- Community discussion forums
-- Expert reputation & rating system
+### 🛒 Marketplace
+Escrow-protected direct farm produce sales. **No middlemen.** GPS-based product discovery.
+
+`MongoDB` `Cloudinary` `Express`
+
+</td>
+<td align="center" width="25%">
+
+### 👨‍🔬 Expert Network
+Verified agronomists answer farmer questions. Knowledge Hub with articles, guides & crop tips.
+
+`Q&A Engine` `Rich Editor` `Ratings`
 
 </td>
 </tr>
@@ -76,181 +165,264 @@ KrushiSetu (meaning *"Bridge for Farmers"* in Hindi) is a **full-stack agricultu
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Tech Stack Breakdown
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   KrushiSetu Platform                    │
-├─────────────────┬───────────────────┬───────────────────┤
-│   Frontend      │    Backend API    │    ML Engine       │
-│   Next.js 16    │  Node.js/Express  │   Python/TF        │
-│   TypeScript    │   REST API        │   Scikit-learn     │
-│   Tailwind CSS  │   MongoDB         │   Gemini AI        │
-│   Framer Motion │   JWT Auth        │   Disease Models   │
-└─────────────────┴───────────────────┴───────────────────┘
-         │                  │                   │
-    Vercel/CDN        Atlas MongoDB        FastAPI/Node
+```mermaid
+mindmap
+  root((KrushiSetu))
+    Frontend
+      Next.js 16 App Router
+      TypeScript
+      Tailwind CSS
+      Framer Motion
+      Recharts
+      SWR Data Fetching
+      Radix UI Primitives
+    Backend
+      Node.js + Express
+      JWT Auth
+      Mongoose ODM
+      Winston Logging
+      Circuit Breaker
+      Rate Limiting
+    ML Engine
+      TensorFlow / Keras
+      Scikit-learn
+      Python 3.10+
+      CNN Architecture
+      Random Forest
+    Cloud & Services
+      MongoDB Atlas
+      Cloudinary CDN
+      Twilio SMS
+      Firebase Push
+      Nodemailer Email
+      Agmarknet API
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 📊 Impact by the Numbers
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 16, TypeScript, Tailwind CSS, Framer Motion, Recharts, SWR |
-| **Backend** | Node.js, Express.js, JWT, Mongoose, Multer, Cloudinary |
-| **Database** | MongoDB Atlas (17 collections) |
-| **AI/ML** | Python, TensorFlow, Scikit-learn, Google Gemini AI |
-| **Notifications** | Nodemailer, Twilio SMS, Firebase Push (FCM) |
-| **Cloud** | Cloudinary (media), MongoDB Atlas, Vercel |
-| **Security** | Helmet, CORS, Rate Limiting, XSS Protection, Input Sanitization |
+<div align="center">
+
+| 🌾 | 📈 | 🤖 | ⚡ | 🔒 |
+|:---:|:---:|:---:|:---:|:---:|
+| **50,000+** | **+35%** | **2M+** | **<200ms** | **A Grade** |
+| Farmers Targeted | Avg Yield Gain | AI Diagnoses/yr | API Response | Security Rating |
+
+</div>
 
 ---
 
-## 🚀 Getting Started
+## 🔐 Multi-Role Access System
 
-### Prerequisites
-- Node.js ≥ 18
-- Python ≥ 3.8
-- MongoDB Atlas account
-- Google Gemini API key
+```mermaid
+graph LR
+    subgraph ROLES["User Roles"]
+        F["🌾 Farmer"]
+        E["🔬 Expert"]
+        C["🛒 Consumer"]
+    end
 
-### Installation
+    subgraph FARMER_ACCESS["Farmer Can:"]
+        F1[List farm produce]
+        F2[Get AI crop diagnosis]
+        F3[View live mandi prices]
+        F4[Post farming questions]
+        F5[Track orders & earnings]
+        F6[Set price alerts]
+    end
+
+    subgraph EXPERT_ACCESS["Expert Can:"]
+        E1[Answer Q&A publicly]
+        E2[Publish articles]
+        E3[Build public profile]
+        E4[Earn reputation score]
+    end
+
+    subgraph CONSUMER_ACCESS["Consumer Can:"]
+        C1[Browse marketplace]
+        C2[Buy farm produce]
+        C3[Track deliveries]
+        C4[Review sellers]
+    end
+
+    F --> FARMER_ACCESS
+    E --> EXPERT_ACCESS
+    C --> CONSUMER_ACCESS
+```
+
+---
+
+## 🗄️ Data Architecture
+
+```
+MongoDB Atlas — 17 Collections
+├── 🔐 Auth Layer
+│   ├── users         → All roles: farmer/expert/consumer
+│   └── tokens        → JWT refresh token rotation
+│
+├── 🛒 Marketplace Layer
+│   ├── products      → Listings + inventory + location
+│   ├── orders        → Full order lifecycle + escrow
+│   ├── cart          → Session cart state
+│   └── reviews       → Verified purchase-only reviews
+│
+├── 🌾 Advisory Layer
+│   ├── questions     → Farmer Q posts
+│   ├── answers       → Expert responses + votes
+│   ├── articles      → Knowledge Hub content
+│   ├── comments      → Article discussion
+│   └── cropadvisories→ AI diagnosis history per user
+│
+├── 📊 Market Layer
+│   ├── mandis        → Mandi master data + GPS
+│   ├── mandiprices   → Time-series commodity prices
+│   └── pricealerts   → User-defined price triggers
+│
+└── 📱 Engagement Layer
+    ├── notifications  → In-app notification feed
+    ├── aifeedback     → AI response quality tracking
+    └── searchhistory  → Search analytics per user
+```
+
+---
+
+## 🔒 Security Architecture
+
+```mermaid
+graph TD
+    REQ[📨 Incoming Request]
+    REQ --> H[Helmet.js — 11 Security Headers]
+    H --> CORS[CORS Whitelist Check]
+    CORS --> RL[Rate Limiter\n1000 req/15min API\n50 req/15min Auth]
+    RL --> XSS[XSS Filter + NoSQL Sanitizer]
+    XSS --> JWT[JWT Verification]
+    JWT --> VAL[Input Validator\nexpress-validator]
+    VAL --> ROUTE[✅ Route Handler]
+    ROUTE --> ERR[Centralized Error Handler]
+```
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/Harsh-1165/Krushisetu.git
-cd Krushisetu
+# 1. Clone
+git clone https://github.com/Harsh-1165/KrushiSetu.git
+cd KrushiSetu
 
-# Install frontend dependencies
-npm install
+# 2. Install all dependencies
+npm install && cd backend && npm install && cd ..
 
-# Install backend dependencies
-cd backend && npm install
-
-# Install Python ML dependencies
+# 3. Install Python ML dependencies
 pip install -r backend/ml/requirements.txt
-```
 
-### Environment Setup
+# 4. Set up environment (copy and fill these files)
+cp .env.local.example .env.local       # frontend config
+cp backend/.env.example backend/.env   # backend config
 
-**Frontend** — create `.env.local` in root:
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
-NEXT_PUBLIC_FIREBASE_API_KEY=your_key
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project
-```
-
-**Backend** — create `.env` in `/backend`:
-```env
-MONGODB_URI=your_mongodb_atlas_uri
-JWT_SECRET=your_jwt_secret
-GEMINI_API_KEY=your_gemini_key
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_key
-CLOUDINARY_API_SECRET=your_secret
-GMAIL_USER=your_email
-GMAIL_APP_PASSWORD=your_app_password
-TWILIO_ACCOUNT_SID=your_sid
-TWILIO_AUTH_TOKEN=your_token
-```
-
-### Run the Application
-
-```bash
+# 5. Run
 # Terminal 1 — Backend
 cd backend && node server
 
-# Terminal 2 — Frontend
+# Terminal 2 — Frontend  
 npm run dev
 
-# App runs at http://localhost:3000
-# API runs at http://localhost:5000
+# 🎉 Open http://localhost:3000
 ```
 
 ---
 
-## 📁 Project Structure
+## 📁 Repository Structure
 
 ```
-Krushisetu/
-├── app/                        # Next.js App Router
-│   ├── (auth)/                 # Login, Signup, Password Reset
-│   ├── (dashboard)/dashboard/  # 16 dashboard sections
-│   ├── marketplace/            # Product listings & checkout
-│   └── knowledge-hub/          # Articles & expert content
-├── components/                 # Reusable UI components (57+ components)
-├── backend/
-│   ├── routes/                 # 14 API route handlers
-│   ├── models/                 # 17 MongoDB schemas
-│   ├── services/               # Email, SMS, Push, AI, Weather
-│   ├── middleware/              # Auth, Rate Limiting, Validation
-│   └── ml/                     # Python ML models & training scripts
-└── lib/                        # API clients & utility functions
+KrushiSetu/
+│
+├── 🖥️  app/                          # Next.js App Router
+│   ├── (auth)/                       # Auth pages: login, signup, reset
+│   ├── (dashboard)/dashboard/        # 16 role-based dashboard sections
+│   ├── marketplace/                  # Product listing, cart & checkout
+│   └── knowledge-hub/                # Articles, categories, write
+│
+├── 🧩  components/                   # 57+ reusable UI components
+│   ├── ui/                           # Radix-based primitives
+│   ├── dashboard/                    # Dashboard-specific widgets
+│   ├── ai/                           # AI advisory components
+│   └── knowledge-hub/                # Article cards, reader progress
+│
+├── ⚡  backend/
+│   ├── routes/                       # 14 API route modules
+│   ├── models/                       # 17 Mongoose schemas
+│   ├── services/                     # Email, SMS, Push, AI, Weather
+│   ├── middleware/                   # Auth, CORS, Rate Limit, Validate
+│   ├── ml/                           # Python ML: predict.py, train.py
+│   └── utils/                        # Logger, AppError, CircuitBreaker
+│
+└── 📚  lib/                          # API clients & TypeScript utils
 ```
 
 ---
 
-## 👥 User Roles
+## 🛣️ Roadmap
 
-| Role | Capabilities |
-|------|-------------|
-| 🌾 **Farmer** | List products, get AI crop advice, view mandi prices, track orders |
-| 🔬 **Agricultural Expert** | Answer Q&A, publish articles, manage expert profile |
-| 🛒 **Consumer/Business** | Browse marketplace, purchase products, track deliveries |
-
----
-
-## 📈 Impact Numbers
-
-| Metric | Value |
-|--------|-------|
-| 🧑‍🌾 Farmers Targeted | 50,000+ |
-| 📈 Avg Yield Improvement | +35% |
-| 🤖 AI Diagnoses Capacity | 2M+/year |
-| ⚡ API Response Time | < 200ms |
-| 🔒 Security Headers | A Grade (Helmet.js) |
-
----
-
-## 🔐 Security Features
-
-- JWT-based authentication with refresh tokens
-- Rate limiting (API: 1000 req/15min, Auth: 50 req/15min)
-- XSS, CSRF, NoSQL injection protection
-- Helmet.js security headers
-- File upload validation & virus scanning ready
-- Input sanitization on all endpoints
+```mermaid
+timeline
+    title KrushiSetu Development Roadmap
+    Q1 2026 : MVP Launch
+             : Core Auth + Marketplace
+             : AI Diagnosis (Crop + Soil)
+             : Live Mandi Prices
+             : Expert Q&A + Knowledge Hub
+    Q2 2026 : Payment Gateway (Razorpay)
+             : Mobile App (React Native)
+             : Hindi + Regional Languages
+             : Admin Dashboard
+             : PWA Offline Support
+    Q3 2026 : Weather-based Crop Planner
+             : FPO Bulk Listings
+             : IoT Sensor Integration
+             : Blockchain Supply Chain
+    Q4 2026 : B2B Wholesale Marketplace
+             : Credit Scoring Engine
+             : Crop Insurance Integration
+             : Export Marketplace
+             : AI Demand Forecasting
+```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) and open a PR.
+We welcome contributions! Here's how to get started:
 
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
+3. **Commit**: `git commit -m 'feat: add amazing feature'`
+4. **Push**: `git push origin feature/amazing-feature`
+5. **Open** a Pull Request
+
+Please follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
 
 ---
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-## 👨‍💻 Author
-
-**Harsh** — Full-Stack Developer  
-[![GitHub](https://img.shields.io/badge/GitHub-Harsh--1165-181717?logo=github)](https://github.com/Harsh-1165)
+Distributed under the **MIT License** — free for personal and commercial use.
 
 ---
 
 <div align="center">
-<strong>⭐ Star this repo if you find it useful!</strong><br/>
-Built with ❤️ for Indian farmers
+
+### Built for India's 140 Million Farming Families 🌾
+
+*"KrushiSetu — Bridge between farmers and the future"*
+
+**⭐ Star this repo if it inspires you!**
+
+[![GitHub Stars](https://img.shields.io/github/stars/Harsh-1165/KrushiSetu?style=for-the-badge&color=22c55e)](https://github.com/Harsh-1165/KrushiSetu/stargazers)
+
+Made with ❤️ by [Harsh](https://github.com/Harsh-1165)
+
 </div>
