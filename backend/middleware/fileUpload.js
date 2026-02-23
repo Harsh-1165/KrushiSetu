@@ -31,7 +31,7 @@ const config = {
   // File size limits (in bytes)
   limits: {
     avatar: 2 * 1024 * 1024, // 2MB
-    productImage: 5 * 1024 * 1024, // 5MB
+    productImage: 15 * 1024 * 1024, // 15MB
     document: 10 * 1024 * 1024, // 10MB
     articleCover: 5 * 1024 * 1024, // 5MB
     advisoryImage: 5 * 1024 * 1024, // 5MB

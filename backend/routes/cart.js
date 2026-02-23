@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
@@ -15,7 +15,7 @@ router.use(authenticate);
 router.get('/', asyncHandler(async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id }).populate({
         path: 'items.product',
-        select: 'name price images inventory.available unit'
+        select: 'name price images inventory.available inventory.minOrder inventory.maxOrder unit'
     });
 
     if (!cart) {
@@ -56,6 +56,12 @@ router.post('/add', asyncHandler(async (req, res) => {
         throw new AppError(`Not enough stock. Available: ${product.inventory.available}`, 400);
     }
 
+    // Enforce minimum order quantity at add-to-cart time
+    const minOrder = product.inventory?.minOrder || 1;
+    if (quantity < minOrder) {
+        throw new AppError(`Minimum order quantity for ${product.name} is ${minOrder}`, 400);
+    }
+
     let cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
@@ -87,7 +93,7 @@ router.post('/add', asyncHandler(async (req, res) => {
     // Populate for response
     await cart.populate({
         path: 'items.product',
-        select: 'name price images inventory.available unit'
+        select: 'name price images inventory.available inventory.minOrder inventory.maxOrder unit'
     });
 
     res.status(200).json({
@@ -140,7 +146,7 @@ router.put('/update', asyncHandler(async (req, res) => {
 
     await cart.populate({
         path: 'items.product',
-        select: 'name price images inventory.available unit'
+        select: 'name price images inventory.available inventory.minOrder inventory.maxOrder unit'
     });
 
     res.status(200).json({
@@ -167,7 +173,7 @@ router.delete('/remove/:productId', asyncHandler(async (req, res) => {
 
     await cart.populate({
         path: 'items.product',
-        select: 'name price images inventory.available unit'
+        select: 'name price images inventory.available inventory.minOrder inventory.maxOrder unit'
     });
 
     res.status(200).json({

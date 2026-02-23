@@ -40,13 +40,12 @@ export default function CheckoutPage() {
     const { items, subtotal, clearCart, count } = useCart()
     const [submitting, setSubmitting] = useState(false)
 
-    // Redirect if cart is empty
+    // Redirect if cart is empty — but wait 3s to avoid false redirect after order error
     useEffect(() => {
         if (items.length === 0) {
-            // Wait slightly to ensure cart load
             const timer = setTimeout(() => {
                 if (items.length === 0) router.push("/dashboard/cart")
-            }, 1000)
+            }, 3000)
             return () => clearTimeout(timer)
         }
     }, [items, router])
