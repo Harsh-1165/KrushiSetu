@@ -14,7 +14,7 @@ const { protect } = require("../middleware/auth")
 const { asyncHandler } = require("../utils/asyncHandler")
 
 // Lazy-load models (they may not exist in all deployments)
-let Order, Product
+let Order, Product, Answer, Article
 
 function getOrder() {
     if (!Order) Order = require("../models/Order")
@@ -25,6 +25,24 @@ function getProduct() {
     try {
         if (!Product) Product = require("../models/Product")
         return Product
+    } catch (e) {
+        return null
+    }
+}
+
+function getAnswer() {
+    try {
+        if (!Answer) Answer = require("../models/Answer")
+        return Answer
+    } catch (e) {
+        return null
+    }
+}
+
+function getArticle() {
+    try {
+        if (!Article) Article = require("../models/Article")
+        return Article
     } catch (e) {
         return null
     }
@@ -144,37 +162,31 @@ router.get(
 
         // ============ EXPERT ANALYTICS ============
         if (role === "expert") {
-            // Try to fetch from Q&A / articles collections if they exist
             let answersData = buckets.map((b) => ({ month: b.label, answers: 0 }))
             let articleViewsData = buckets.map((b) => ({ month: b.label, views: 0 }))
             let upvotesData = buckets.map((b) => ({ month: b.label, upvotes: 0 }))
             let hasRealData = false
 
             try {
-                // Try to load Question / Answer model dynamically
-                const Question = mongoose.modelNames().includes("Question")
-                    ? mongoose.model("Question")
-                    : null
-
-                if (Question) {
-                    const expertAnswers = await Question.aggregate([
-                        {
-                            $unwind: "$answers",
-                        },
+                // Query Answer model for expert's answers
+                const AnswerModel = getAnswer()
+                if (AnswerModel) {
+                    const expertAnswers = await AnswerModel.aggregate([
                         {
                             $match: {
-                                "answers.author": new mongoose.Types.ObjectId(userId),
-                                "answers.createdAt": { $gte: sixMonthsAgo },
+                                author: new mongoose.Types.ObjectId(userId),
+                                createdAt: { $gte: sixMonthsAgo },
+                                isDeleted: { $ne: true },
                             },
                         },
                         {
                             $group: {
                                 _id: {
-                                    year: { $year: "$answers.createdAt" },
-                                    month: { $month: "$answers.createdAt" },
+                                    year: { $year: "$createdAt" },
+                                    month: { $month: "$createdAt" },
                                 },
-                                answers: { $sum: 1 },
-                                upvotes: { $sum: { $size: { $ifNull: ["$answers.upvotes", []] } } },
+                                count: { $sum: 1 },
+                                totalHelpful: { $sum: "$helpfulCount" },
                             },
                         },
                     ])
@@ -184,27 +196,30 @@ router.get(
                         const ansMap = new Map(expertAnswers.map((r) => [`${r._id.year}-${r._id.month}`, r]))
                         answersData = buckets.map((b) => ({
                             month: b.label,
-                            answers: ansMap.get(`${b.year}-${b.month}`)?.answers || 0,
+                            answers: ansMap.get(`${b.year}-${b.month}`)?.count || 0,
                         }))
                         upvotesData = buckets.map((b) => ({
                             month: b.label,
-                            upvotes: ansMap.get(`${b.year}-${b.month}`)?.upvotes || 0,
+                            upvotes: ansMap.get(`${b.year}-${b.month}`)?.totalHelpful || 0,
                         }))
                     }
                 }
 
-                // Article views
-                const Article = mongoose.modelNames().includes("Article")
-                    ? mongoose.model("Article")
-                    : null
-
-                if (Article) {
-                    const articleAgg = await Article.aggregate([
-                        { $match: { author: new mongoose.Types.ObjectId(userId), createdAt: { $gte: sixMonthsAgo } } },
+                // Query Article model for expert's articles
+                const ArticleModel = getArticle()
+                if (ArticleModel) {
+                    const articleAgg = await ArticleModel.aggregate([
+                        {
+                            $match: {
+                                author: new mongoose.Types.ObjectId(userId),
+                                createdAt: { $gte: sixMonthsAgo },
+                                status: "published",
+                            },
+                        },
                         {
                             $group: {
                                 _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
-                                views: { $sum: { $ifNull: ["$viewCount", 0] } },
+                                views: { $sum: { $ifNull: ["$views", 0] } },
                             },
                         },
                     ])
@@ -246,3 +261,4 @@ router.get(
 )
 
 module.exports = router
+

@@ -125,7 +125,7 @@ export default function WriteArticlePage() {
     try {
       await createArticle({ ...formData, status: "draft" });
       toast.success("Draft saved successfully");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to save draft");
     } finally {
       setIsSavingDraft(false);
@@ -140,7 +140,7 @@ export default function WriteArticlePage() {
       await createArticle({ ...formData, status: "published" });
       toast.success("Article published successfully!");
       router.push("/knowledge-hub");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to publish article");
     } finally {
       setIsSubmitting(false);
@@ -149,7 +149,7 @@ export default function WriteArticlePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-4">
@@ -202,24 +202,26 @@ export default function WriteArticlePage() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-200px)]">
+          <div className="lg:col-span-2 space-y-6 flex flex-col">
             {showPreview ? (
-              <Card>
-                <CardContent className="pt-6">
+              <Card className="shadow-lg flex-1 overflow-auto">
+                <CardContent className="pt-8 pb-8">
                   <article className="prose prose-green max-w-none dark:prose-invert">
                     {coverImagePreview && (
                       <img
                         src={coverImagePreview || "/placeholder.svg"}
                         alt="Cover"
-                        className="w-full h-64 object-cover rounded-lg mb-6"
+                        className="w-full h-80 object-cover rounded-lg mb-8"
                       />
                     )}
-                    <h1>{formData.title || "Untitled Article"}</h1>
-                    <p className="lead text-muted-foreground">{formData.excerpt}</p>
+                    <h1 className="text-4xl font-bold">{formData.title || "Untitled Article"}</h1>
+                    <p className="lead text-muted-foreground text-lg mt-4">{formData.excerpt}</p>
+                    <hr className="my-6" />
                     <div
+                      className="prose-base"
                       dangerouslySetInnerHTML={{
-                        __html: formData.content || "<p>No content yet...</p>",
+                        __html: formData.content || "<p className='text-muted-foreground'>No content yet...</p>",
                       }}
                     />
                   </article>
@@ -227,37 +229,47 @@ export default function WriteArticlePage() {
               </Card>
             ) : (
               <>
-                <div className="space-y-4">
-                  <div>
+                {/* Title and Excerpt - Fixed at top */}
+                <div className="space-y-4 shrink-0">
+                  {/* Title Input */}
+                  <div className="space-y-2">
+                    <label className="text-sm text-muted-foreground">Article Title</label>
                     <Input
-                      placeholder="Article Title"
+                      placeholder="Enter an engaging title for your article..."
                       value={formData.title}
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, title: e.target.value }))
                       }
-                      className="text-3xl font-bold border-0 px-0 focus-visible:ring-0 placeholder:text-muted-foreground/50"
+                      className="text-3xl font-bold border bg-background px-4 py-3 focus-visible:ring-2 focus-visible:ring-primary placeholder:text-muted-foreground/50"
                     />
                   </div>
 
-                  <div>
+                  {/* Excerpt Input */}
+                  <div className="space-y-2">
+                    <label className="text-sm text-muted-foreground">Article Excerpt</label>
                     <Textarea
-                      placeholder="Write a brief excerpt that summarizes your article..."
+                      placeholder="Write a brief 1-2 sentence excerpt that summarizes your article..."
                       value={formData.excerpt}
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, excerpt: e.target.value }))
                       }
-                      className="resize-none border-0 px-0 focus-visible:ring-0 text-lg text-muted-foreground placeholder:text-muted-foreground/50"
-                      rows={2}
+                      className="resize-none border bg-background px-4 py-3 focus-visible:ring-2 focus-visible:ring-primary text-base text-muted-foreground placeholder:text-muted-foreground/50"
+                      rows={3}
                     />
                   </div>
                 </div>
 
-                <Card>
-                  <CardContent className="pt-6">
+                {/* Rich Text Editor - Takes remaining space */}
+                <Card className="shadow-md h-full flex flex-col flex-1">
+                  <CardHeader className="pb-3 shrink-0">
+                    <CardTitle className="text-sm text-muted-foreground">Article Content</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 flex-1 flex flex-col min-h-0">
                     <RichTextEditor
-                      content={formData.content}
+                      value={formData.content}
                       onChange={handleContentChange}
-                      placeholder="Start writing your article..."
+                      placeholder="Start writing your article... Use the toolbar above for formatting (H1, H2, H3, Bold, Italic, Underline, Lists, Links, Images, etc.)"
+                      minHeight="500px"
                     />
                   </CardContent>
                 </Card>
@@ -265,7 +277,7 @@ export default function WriteArticlePage() {
             )}
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-auto">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Cover Image</CardTitle>

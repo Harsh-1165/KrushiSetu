@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,16 +11,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArticleCard } from "@/components/knowledge-hub/article-card";
 import {
   ArrowLeft,
-  MapPin,
   Calendar,
   Award,
   BookOpen,
   Users,
   Star,
   MessageSquare,
-  ExternalLink,
   Mail,
-  Phone,
 } from "lucide-react";
 import { getAuthorProfile, type Author, type Article } from "@/lib/knowledge-hub-api";
 
@@ -74,7 +70,7 @@ export default function AuthorProfilePage({
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-br from-green-600 to-green-800 text-white">
+      <div className="bg-linear-to-br from-green-600 to-green-800 text-white">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
@@ -110,10 +106,9 @@ export default function AuthorProfilePage({
               <p className="text-lg text-green-100 mb-4">{author.role}</p>
 
               <div className="flex flex-wrap gap-4 text-sm text-green-100">
-                {/* Location might not be in author object yet, removed for now or check if exists */}
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  Request to fetch joinedDate or removing if not available in Author type
+                  <span>Member since {new Date(((author as any).createdAt) || Date.now()).getFullYear()}</span>
                 </div>
               </div>
             </div>
@@ -177,7 +172,7 @@ export default function AuthorProfilePage({
                 {articles.length > 0 ? (
                   <div className="grid gap-6">
                     {articles.map((article) => (
-                      <ArticleCard key={article._id} article={article} variant="horizontal" />
+                      <ArticleCard key={article._id} article={article} variant="default" />
                     ))}
                   </div>
                 ) : (
@@ -200,11 +195,11 @@ export default function AuthorProfilePage({
                       <h3>About {`${author.name.first} ${author.name.last}`}</h3>
                       <p>{author.bio}</p>
 
-                      {author.expertise && author.expertise.length > 0 && (
+                      {(author as any).expertise && (author as any).expertise.length > 0 && (
                         <>
                           <h4>Areas of Expertise</h4>
                           <div className="flex flex-wrap gap-2 not-prose">
-                            {author.expertise.map((exp) => (
+                            {((author as any).expertise as string[]).map((exp: string) => (
                               <Badge key={exp} variant="secondary">
                                 {exp}
                               </Badge>
@@ -253,7 +248,7 @@ export default function AuthorProfilePage({
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
-                  <a href={`mailto:${author.email || "contact@greentrace.com"}`}>
+                  <a href={`mailto:${(author as any).email || "contact@greentrace.com"}`}>
                     <Mail className="h-4 w-4 mr-2" />
                     Send Email
                   </a>
@@ -274,7 +269,7 @@ export default function AuthorProfilePage({
 function AuthorProfileSkeleton() {
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-br from-green-600 to-green-800">
+      <div className="bg-linear-to-br from-green-600 to-green-800">
         <div className="container mx-auto px-4 py-8">
           <Skeleton className="h-8 w-32 bg-white/20 mb-6" />
           <div className="flex gap-6 items-center">

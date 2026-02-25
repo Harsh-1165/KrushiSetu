@@ -14,6 +14,7 @@ import {
   ThumbsDown,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   HelpCircle,
   XCircle,
   User,
@@ -265,12 +266,14 @@ function AnswerCard({
   currentUserId,
   isQuestionAuthor,
   onUpdate,
+  user,
 }: {
   answer: Answer
   question: Question
   currentUserId?: string
   isQuestionAuthor: boolean
   onUpdate: () => void
+  user?: any
 }) {
   const [helpful, setHelpful] = useState(false)
   const [helpfulCount, setHelpfulCount] = useState(answer.helpfulCount)
@@ -280,12 +283,15 @@ function AnswerCard({
   const [newComment, setNewComment] = useState("")
   const [submittingComment, setSubmittingComment] = useState(false)
   const [replyTo, setReplyTo] = useState<string | null>(null)
+  const [needMoreGuidanceLoading, setNeedMoreGuidanceLoading] = useState(false)
 
   const handleVote = async (voteType: "helpful" | "not_helpful") => {
     try {
       const response = await answerApi.vote(answer._id, voteType)
-      setHelpful(response.isHelpful)
-      setHelpfulCount(response.helpfulCount)
+      setHelpful(response.isHelpful ?? !helpful)
+      setHelpfulCount(
+        typeof response.helpfulCount === "number" ? response.helpfulCount : helpfulCount
+      )
     } catch (error) {
       toast.error("Failed to vote")
     }
@@ -298,6 +304,20 @@ function AnswerCard({
       onUpdate()
     } catch (error) {
       toast.error("Failed to accept answer")
+    }
+  }
+
+  const handleNeedMoreGuidance = async () => {
+    setNeedMoreGuidanceLoading(true)
+    try {
+      await answerApi.needMoreGuidance(answer._id)
+      toast.success("Request for more guidance sent! The expert will provide additional help.")
+      onUpdate()
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Failed to request more guidance"
+      toast.error(msg)
+    } finally {
+      setNeedMoreGuidanceLoading(false)
     }
   }
 
@@ -467,7 +487,7 @@ function AnswerCard({
                   ) : (
                     <Package className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <span className="text-sm truncate max-w-[200px]">{att.filename}</span>
+                  <span className="text-sm truncate max-w-50">{att.filename}</span>
                 </a>
               ))}
             </div>
@@ -506,15 +526,31 @@ function AnswerCard({
           </div>
           <div className="flex items-center gap-2">
             {isQuestionAuthor && !answer.isAccepted && question.status !== "resolved" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAccept}
-                className="text-green-600 border-green-600 hover:bg-green-50 bg-transparent"
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Accept Answer
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAccept}
+                  className="text-green-600 border-green-600 hover:bg-green-50 bg-transparent"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Accept Answer
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNeedMoreGuidance}
+                  disabled={needMoreGuidanceLoading}
+                  className="text-orange-600 border-orange-600 hover:bg-orange-50 bg-transparent"
+                >
+                  {needMoreGuidanceLoading ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                  )}
+                  {needMoreGuidanceLoading ? "Requesting..." : "Need More Guidance"}
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -539,14 +575,20 @@ function AnswerCard({
                     <Send className="h-4 w-4" />
                   )}
                 </Button>
-                {replyTo && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setReplyTo(null)}
-                  >
-                    Cancel
+                {(user?.role === "farmer" || user?.role === "consumer") && (
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/dashboard/questions/my">
+                      <User className="h-4 w-4 mr-2 text-primary" />
+                      My Questions
+                    </Link>
+                  </Button>
+                )}
+                {user?.role === "expert" && (
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/dashboard/answers">
+                      <MessageSquare className="h-4 w-4 mr-2 text-primary" />
+                      My Answers
+                    </Link>
                   </Button>
                 )}
               </div>
@@ -774,8 +816,10 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
   const fetchQuestion = async () => {
     try {
       const response = await questionApi.getById(resolvedParams.id)
-      setQuestion(response.question)
-      setRelatedQuestions(response.relatedQuestions)
+      console.log("Question data received:", response.data)
+      console.log("Attachments:", response.data.attachments)
+      setQuestion(response.data)
+      setRelatedQuestions(response.relatedQuestions || [])
     } catch (error) {
       console.log("[v0] Error fetching question:", error)
       setError("Question not found")
@@ -783,6 +827,13 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
       setLoading(false)
     }
   }
+
+  // Debug: Log attachments when question changes
+  React.useEffect(() => {
+    if (question) {
+      console.log("Current question attachments:", question.attachments)
+    }
+  }, [question])
 
   useEffect(() => {
     fetchQuestion()
@@ -954,35 +1005,45 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
               )}
 
               {/* Attachments */}
-              {question.attachments && question.attachments.length > 0 && (
+              {question.attachments && question.attachments.length > 0 ? (
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm">Attachments:</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {question.attachments.map((att, index) => (
-                      <a
-                        key={index}
-                        href={getFileUrl(att.url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="relative group"
-                      >
-                        {att.type === "image" ? (
-                          <img
-                            src={getFileUrl(att.url)}
-                            alt={att.filename}
-                            className="w-full h-24 object-cover rounded-lg border"
-                          />
-                        ) : (
-                          <div className="w-full h-24 rounded-lg border flex items-center justify-center bg-muted">
-                            <Video className="h-8 w-8 text-muted-foreground" />
+                    {question.attachments.map((att, index) => {
+                      console.log("Rendering attachment:", att);
+                      const fileUrl = getFileUrl(att.url);
+                      console.log("File URL:", fileUrl);
+                      return (
+                        <a
+                          key={index}
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="relative group"
+                        >
+                          {att.type === "image" ? (
+                            <img
+                              src={fileUrl}
+                              alt={att.filename}
+                              className="w-full h-24 object-cover rounded-lg border"
+                            />
+                          ) : (
+                            <div className="w-full h-24 rounded-lg border flex items-center justify-center bg-muted">
+                              <Video className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <span className="text-white text-xs">View</span>
                           </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                          <span className="text-white text-xs">View</span>
-                        </div>
-                      </a>
-                    ))}
+                        </a>
+                      )
+                    })}
                   </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Attachments:</h4>
+                  <p className="text-sm text-muted-foreground">No attachments</p>
                 </div>
               )}
             </CardContent>
@@ -1016,6 +1077,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                   currentUserId={user?.id}
                   isQuestionAuthor={isAuthor}
                   onUpdate={fetchQuestion}
+                  user={user}
                 />
               ))
             ) : (
@@ -1030,18 +1092,20 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
               </Card>
             )}
 
-            {/* Answer Form for Experts */}
-            {isExpert && !hasAnswered && question.status !== "closed" && (
-              <AnswerForm questionId={question._id} onSubmit={fetchQuestion} />
-            )}
-
-            {isExpert && hasAnswered && (
-              <Card>
-                <CardContent className="py-6 text-center text-muted-foreground">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                  You have already answered this question.
-                </CardContent>
-              </Card>
+            {/* Answer Form for Experts.
+                Show when expert hasn't answered OR when any answer has been marked as needing more guidance.
+            */}
+            {isExpert && question.status !== "closed" && (
+              (question.answers?.some((a) => a.needsMoreGuidance) || !hasAnswered) ? (
+                <AnswerForm questionId={question._id} onSubmit={fetchQuestion} />
+              ) : (
+                <Card>
+                  <CardContent className="py-6 text-center text-muted-foreground">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    You have already answered this question.
+                  </CardContent>
+                </Card>
+              )
             )}
           </div>
         </div>

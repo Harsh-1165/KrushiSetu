@@ -24,8 +24,8 @@ import {
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const CHART_COLOR = "var(--chart-1)"
-const CHART_COLOR_2 = "var(--chart-2)"
+const CHART_COLOR = "hsl(142, 71%, 45%)" // Green for expert
+const CHART_COLOR_2 = "hsl(200, 100%, 50%)" // Blue for views
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ function FarmerAnalytics({ apiData }: { apiData: FarmerApiData | null }) {
       ? apiData.charts.revenueData
       : fallback.revenueData ?? []
 
-  const chartConfig = { revenue: { label: "Revenue", color: CHART_COLOR } }
+  const chartConfig = { revenue: { label: "Revenue", color: "#22c55e" } }
 
   return (
     <div className="space-y-6">
@@ -143,15 +143,15 @@ function FarmerAnalytics({ apiData }: { apiData: FarmerApiData | null }) {
           <CardDescription>Monthly revenue for the last 6 months.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[320px] w-full">
+          <ChartContainer config={chartConfig} className="h-80! w-full aspect-auto!">
             <AreaChart
               data={revenueData}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
               <defs>
                 <linearGradient id="farmerRevenueArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_COLOR} stopOpacity={0.45} />
-                  <stop offset="95%" stopColor={CHART_COLOR} stopOpacity={0} />
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -166,7 +166,7 @@ function FarmerAnalytics({ apiData }: { apiData: FarmerApiData | null }) {
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke={CHART_COLOR}
+                stroke="#22c55e"
                 strokeWidth={2.5}
                 fill="url(#farmerRevenueArea)"
                 fillOpacity={1}
@@ -189,23 +189,29 @@ function ExpertAnalytics({ apiData }: { apiData: ExpertApiData | null }) {
   const answersData =
     apiData?.charts?.answersData?.length
       ? apiData.charts.answersData
-      : fallbackAnalytics.answersData ?? []
+      : fallbackAnalytics?.answersData ?? []
 
   const articleViewsData =
     apiData?.charts?.articleViewsData?.length
       ? apiData.charts.articleViewsData
-      : fallbackAnalytics.articleViewsData ?? []
+      : fallbackAnalytics?.articleViewsData ?? []
 
   const upvotesData =
     apiData?.charts?.upvotesData?.length
       ? apiData.charts.upvotesData
-      : fallbackAnalytics.upvotesData ?? []
+      : fallbackAnalytics?.upvotesData ?? []
+
+  // Ensure data is populated
+  if (!answersData.length || !articleViewsData.length || !upvotesData.length) {
+    console.log("Expert Analytics Data:", { answersData: answersData.length, articleViewsData: articleViewsData.length, upvotesData: upvotesData.length })
+  }
 
   const totalViews = (fallback.articles ?? []).reduce((a, b) => a + (b.views ?? 0), 0)
 
-  const answersConfig = { answers: { label: "Answers", color: CHART_COLOR } }
-  const viewsConfig = { views: { label: "Views", color: CHART_COLOR_2 } }
-  const upvotesConfig = { upvotes: { label: "Upvotes", color: CHART_COLOR } }
+  const answersConfig = { answers: { label: "Answers", color: "#22c55e" } }
+  const viewsConfig = { views: { label: "Views", color: "#3b82f6" } }
+  const upvotesConfig = { upvotes: { label: "Upvotes", color: "#22c55e" } }
+  const chartConfig = { revenue: { label: "Revenue", color: "#22c55e" } }
 
   return (
     <div className="space-y-6">
@@ -253,7 +259,7 @@ function ExpertAnalytics({ apiData }: { apiData: ExpertApiData | null }) {
             <CardDescription>Questions you answered each month.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={answersConfig} className="h-[280px] w-full">
+            <ChartContainer config={answersConfig} className="h-80! w-full aspect-auto!">
               <BarChart
                 data={answersData}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
@@ -264,9 +270,9 @@ function ExpertAnalytics({ apiData }: { apiData: ExpertApiData | null }) {
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar
                   dataKey="answers"
-                  fill={CHART_COLOR}
+                  fill="#22c55e"
                   radius={[4, 4, 0, 0]}
-                  stroke={CHART_COLOR}
+                  stroke="#22c55e"
                   strokeWidth={1}
                 />
               </BarChart>
@@ -282,15 +288,15 @@ function ExpertAnalytics({ apiData }: { apiData: ExpertApiData | null }) {
             <CardDescription>Monthly views on your articles.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={viewsConfig} className="h-[280px] w-full">
+            <ChartContainer config={viewsConfig} className="h-80! w-full aspect-auto!">
               <AreaChart
                 data={articleViewsData}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="expertViewsArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLOR_2} stopOpacity={0.45} />
-                    <stop offset="95%" stopColor={CHART_COLOR_2} stopOpacity={0} />
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -300,7 +306,7 @@ function ExpertAnalytics({ apiData }: { apiData: ExpertApiData | null }) {
                 <Area
                   type="monotone"
                   dataKey="views"
-                  stroke={CHART_COLOR_2}
+                  stroke="#3b82f6"
                   strokeWidth={2.5}
                   fill="url(#expertViewsArea)"
                   fillOpacity={1}
@@ -319,15 +325,15 @@ function ExpertAnalytics({ apiData }: { apiData: ExpertApiData | null }) {
           <CardDescription>Monthly upvotes on your answers.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={upvotesConfig} className="h-[300px] w-full">
+          <ChartContainer config={upvotesConfig} className="h-96! w-full aspect-auto!">
             <AreaChart
               data={upvotesData}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
               <defs>
                 <linearGradient id="expertUpvotesArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_COLOR} stopOpacity={0.45} />
-                  <stop offset="95%" stopColor={CHART_COLOR} stopOpacity={0} />
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.45} />
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -337,7 +343,7 @@ function ExpertAnalytics({ apiData }: { apiData: ExpertApiData | null }) {
               <Area
                 type="monotone"
                 dataKey="upvotes"
-                stroke={CHART_COLOR}
+                stroke="#22c55e"
                 strokeWidth={2.5}
                 fill="url(#expertUpvotesArea)"
                 fillOpacity={1}
@@ -365,7 +371,7 @@ function AnalyticsSkeleton() {
           <Skeleton key={i} className="h-28 rounded-xl" />
         ))}
       </div>
-      <Skeleton className="h-[320px] w-full rounded-xl" />
+      <Skeleton className="h-80 w-full rounded-xl" />
     </div>
   )
 }

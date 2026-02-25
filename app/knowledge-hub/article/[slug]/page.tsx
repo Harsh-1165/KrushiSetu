@@ -39,7 +39,7 @@ import {
 export default function ArticleDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const contentRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement | null>(null)
   const slug = params.slug as string
 
   const [article, setArticle] = useState<Article | null>(null)
@@ -159,7 +159,7 @@ export default function ArticleDetailPage() {
 
       <div className="min-h-screen bg-background">
         {/* Header */}
-        <header className="sticky top-1 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-1 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
           <div className="container flex h-14 items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" onClick={() => router.back()}>
@@ -295,7 +295,7 @@ export default function ArticleDetailPage() {
 
               {/* Cover Image */}
               {article.coverImage?.url && (
-                <div className="relative aspect-[16/9] rounded-lg overflow-hidden mb-8">
+                <div className="relative aspect-video rounded-lg overflow-hidden mb-8">
                   <Image
                     src={article.coverImage.url || "/placeholder.svg"}
                     alt={article.coverImage.alt || article.title}
@@ -501,7 +501,7 @@ function ArticleDetailSkeleton() {
               <Skeleton className="h-3 w-48" />
             </div>
           </div>
-          <Skeleton className="aspect-[16/9] w-full rounded-lg mb-8" />
+          <Skeleton className="aspect-video w-full rounded-lg mb-8" />
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-4 w-full" />

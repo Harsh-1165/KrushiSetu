@@ -16,6 +16,10 @@ export interface User {
     url: string
   }
   role: string
+  expertProfile?: {
+    specializations?: string[]
+    experience?: number
+  }
 }
 
 export interface Question {
@@ -23,17 +27,30 @@ export interface Question {
   title: string
   description: string
   category: string
+  subcategory?: string
   cropType?: string
   images?: string[]
   tags: string[]
   urgency: "low" | "medium" | "high" | "critical"
   status: "open" | "answered" | "resolved" | "closed"
   author: User
-  answers: any[] // Define Answer type if needed
+  assignedExpert?: User
+  answers?: Answer[]
   answerCount: number
   viewCount: number
   upvotes: number
   isResolved: boolean
+  isDeleted?: boolean
+  isEdited?: boolean
+  location?: {
+    state?: string
+    district?: string
+  }
+  attachments?: Array<{
+    url: string
+    filename: string
+    type: "image" | "video" | "document"
+  }>
   createdAt: string
   updatedAt: string
 }
@@ -173,14 +190,22 @@ export const questionApi = {
   },
 
   create: async (data: any) => {
+    // Check if data is FormData (for file uploads) or regular object (for JSON)
+    const isFormData = data instanceof FormData;
+
     const response = await fetchWithAuth(`${API_BASE_URL}/advisory/questions`, {
       method: "POST",
-      headers: {
+      headers: isFormData ? {} : {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: isFormData ? data : JSON.stringify(data),
     })
-    if (!response.ok) throw new Error("Failed to create question")
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || "Failed to create question")
+    }
+
     return response.json()
   },
 
@@ -188,7 +213,28 @@ export const questionApi = {
     const response = await fetchWithAuth(`${API_BASE_URL}/advisory/questions/trending?limit=${limit}`)
     if (!response.ok) throw new Error("Failed to fetch trending questions")
     return response.json()
-  }
+  },
+
+  getMyQuestions: async (params: { page?: number; limit?: number; status?: string } = {}) => {
+    const searchParams = new URLSearchParams()
+    if (params.page) searchParams.set("page", String(params.page))
+    if (params.limit) searchParams.set("limit", String(params.limit))
+    if (params.status) searchParams.set("status", params.status)
+    const response = await fetchWithAuth(`${API_BASE_URL}/advisory/questions/my?${searchParams.toString()}`)
+    if (!response.ok) throw new Error("Failed to fetch my questions")
+    return response.json()
+  },
+
+  delete: async (id: string) => {
+    const response = await fetchWithAuth(`${API_BASE_URL}/advisory/questions/${id}`, {
+      method: "DELETE",
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.message || "Failed to delete question")
+    }
+    return response.json()
+  },
 }
 
 export const categoryApi = {
@@ -271,19 +317,26 @@ export interface Answer {
   }
   isAccepted: boolean
   isVerified: boolean
+  isEdited: boolean
   helpfulCount: number
-  isEdited?: boolean
+  needsMoreGuidance: boolean
+  question?: Question & {
+    _id: string
+    title: string
+    viewCount: number
+  }
+  attachments?: Array<{
+    url: string
+    filename: string
+    type: "image" | "video" | "document"
+    size: number
+  }>
   recommendations?: Array<{
     type: string
     description: string
     priority: "low" | "medium" | "high"
     estimatedCost?: string
     timeframe?: string
-  }>
-  attachments?: Array<{
-    url: string
-    filename: string
-    type: "image" | "video" | "document"
   }>
   createdAt: string
   updatedAt: string
@@ -341,6 +394,41 @@ export const answerApi = {
     if (!response.ok) {
       const err = await response.json().catch(() => ({}))
       throw new Error(err.message || "Failed to accept answer")
+    }
+    return response.json()
+  },
+
+  /** Request more guidance for an answer */
+  needMoreGuidance: async (answerId: string) => {
+    const response = await fetchWithAuth(`${API_BASE_URL}/advisory/answers/${answerId}/need-more-guidance`, {
+      method: "POST",
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.message || "Failed to request more guidance")
+    }
+    return response.json()
+  },
+
+  /** Get expert's best answers */
+  getExpertBestAnswers: async (expertId: string) => {
+    const response = await fetchWithAuth(`${API_BASE_URL}/advisory/answers/expert/${expertId}`)
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.message || "Failed to fetch expert answers")
+    }
+    return response.json()
+  },
+
+  /** Get answers posted by the currently authenticated expert */
+  getMyAnswers: async (params: { page?: number; limit?: number } = {}) => {
+    const searchParams = new URLSearchParams()
+    if (params.page) searchParams.set("page", String(params.page))
+    if (params.limit) searchParams.set("limit", String(params.limit))
+    const response = await fetchWithAuth(`${API_BASE_URL}/advisory/answers/my?${searchParams.toString()}`)
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.message || "Failed to fetch my answers")
     }
     return response.json()
   },

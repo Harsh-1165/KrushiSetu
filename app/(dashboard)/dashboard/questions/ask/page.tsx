@@ -14,7 +14,6 @@ import {
   Video,
   Loader2,
   CheckCircle,
-  AlertTriangle,
   Info,
   Bug,
   Droplet,
@@ -204,18 +203,16 @@ export default function AskQuestionPage() {
       formData.append("urgency", urgency)
       if (tags.length > 0) formData.append("tags", JSON.stringify(tags))
       if (state || district) {
-        formData.append(
-          "location",
-          JSON.stringify({
-            state,
-            district,
-          })
-        )
+        formData.append("location", JSON.stringify({
+          state,
+          district,
+        }))
       }
 
-      attachments.forEach((att) => {
-        formData.append("attachments", att.file)
-      })
+      // Add the first attachment (backend only supports one file for now)
+      if (attachments.length > 0) {
+        formData.append("image", attachments[0].file)
+      }
 
       const response = await questionApi.create(formData)
 
@@ -224,7 +221,7 @@ export default function AskQuestionPage() {
 
       // Redirect after a short delay
       setTimeout(() => {
-        router.push(`/dashboard/questions/${response.question._id}`)
+        router.push(`/dashboard/questions/${response.data._id}`)
       }, 2000)
     } catch (error) {
       console.log("Error submitting question:", error)
@@ -510,7 +507,7 @@ export default function AskQuestionPage() {
             <CardHeader>
               <CardTitle>Attachments</CardTitle>
               <CardDescription>
-                Add images or videos to help illustrate your problem (optional)
+                Add images or videos to help illustrate your problem (optional - max 1 file)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -519,7 +516,6 @@ export default function AskQuestionPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*,video/*"
-                  multiple
                   onChange={handleFileSelect}
                   className="hidden"
                   id="file-upload"
@@ -528,7 +524,7 @@ export default function AskQuestionPage() {
                   <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
                   <p className="text-sm font-medium">Click to upload or drag and drop</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Images (JPEG, PNG, WebP) or Videos (MP4, MOV) up to 50MB each
+                    Images (JPEG, PNG, WebP) or Videos (MP4, MOV) up to 50MB
                   </p>
                 </label>
               </div>
@@ -567,7 +563,7 @@ export default function AskQuestionPage() {
               )}
 
               <p className="text-xs text-muted-foreground">
-                {attachments.length}/5 attachments added
+                {attachments.length}/1 attachments added (max 1 for now)
               </p>
             </CardContent>
           </Card>

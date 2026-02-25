@@ -74,6 +74,12 @@ const answerSchema = new mongoose.Schema(
     },
     acceptedAt: Date,
 
+    // More guidance needed
+    needsMoreGuidance: {
+      type: Boolean,
+      default: false,
+    },
+
     // Helpful votes
     helpfulCount: {
       type: Number,

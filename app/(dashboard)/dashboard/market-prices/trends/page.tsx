@@ -219,7 +219,7 @@ export default function PriceTrendsPage() {
               <ArrowLeft className="h-4 w-4" /> Back to Market
             </Link>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-600">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">
             Market Intelligence
           </h1>
           <p className="text-slate-400">
@@ -383,7 +383,7 @@ export default function PriceTrendsPage() {
         <div className="space-y-6">
 
           {/* AI Insight Panel */}
-          <Card className="border-indigo-100 bg-gradient-to-r from-indigo-50 to-white overflow-hidden relative">
+          <Card className="relative overflow-hidden border-indigo-100 bg-gradient-to-r from-indigo-50 to-white">
             <div className="absolute top-0 right-0 p-3 opacity-10">
               <Cpu className="h-24 w-24 text-indigo-600" />
             </div>
@@ -405,7 +405,7 @@ export default function PriceTrendsPage() {
                 </div>
 
                 <div className={cn(
-                  "px-6 py-4 rounded-xl border-l-4 flex flex-col items-center min-w-[140px]",
+                  "px-6 py-4 rounded-xl border-l-4 flex flex-col items-center min-w-[8.75rem]",
                   trendData.aiInsight?.advice === "sell" ? "bg-green-100 border-green-500" :
                     trendData.aiInsight?.advice === "wait" ? "bg-amber-100 border-amber-500" :
                       "bg-slate-100 border-slate-400"
@@ -472,7 +472,7 @@ export default function PriceTrendsPage() {
                 <CardDescription className="text-slate-400">Daily Min, Max, and Modal prices</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[350px] w-full">
+                <div className="h-[21.875rem] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendData.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
@@ -539,7 +539,7 @@ export default function PriceTrendsPage() {
                 <CardDescription className="text-slate-400">Daily volume in Quintals</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[350px] w-full">
+                <div className="h-[21.875rem] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={trendData.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
@@ -583,8 +583,8 @@ function TrendSkeleton() {
         ))}
       </div>
       <div className="grid grid-cols-3 gap-6">
-        <Skeleton className="col-span-2 h-[400px] rounded-xl bg-slate-800" />
-        <Skeleton className="col-span-1 h-[400px] rounded-xl bg-slate-800" />
+        <Skeleton className="col-span-2 h-[25rem] rounded-xl bg-slate-800" />
+        <Skeleton className="col-span-1 h-[25rem] rounded-xl bg-slate-800" />
       </div>
     </div>
   )

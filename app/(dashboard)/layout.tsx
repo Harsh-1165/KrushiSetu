@@ -98,7 +98,7 @@ const getNavItems = (role: string) => {
     expert: [
       { title: "Advisory Requests", href: "/expert/advisory", icon: ClipboardList, badge: 5 },
       { title: "Questions", href: "/dashboard/questions", icon: HelpCircle, badge: 12 },
-      { title: "My Answers", href: "/dashboard/questions/my", icon: MessageSquare },
+      { title: "My Answers", href: "/dashboard/answers", icon: MessageSquare },
       { title: "Articles", href: "/knowledge-hub", icon: FileText },
       { title: "Write Article", href: "/knowledge-hub/write", icon: Plus },
       { title: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },

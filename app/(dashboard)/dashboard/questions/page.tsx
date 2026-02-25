@@ -220,8 +220,15 @@ function QuestionCardSkeleton() {
   )
 }
 
-function StatsCard({ stats }: { stats: AdvisoryStats | null }) {
+function StatsCard({ stats, onRefresh }: { stats: AdvisoryStats | null; onRefresh: () => void }) {
   if (!stats) return null
+
+  // Handle different possible data structures
+  const questionsData = stats.questions || {}
+  const total = questionsData.total || 0
+  const open = questionsData.open || 0
+  const resolved = questionsData.resolved || 0
+  const resolutionRate = questionsData.resolutionRate || 0
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -230,7 +237,7 @@ function StatsCard({ stats }: { stats: AdvisoryStats | null }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Total Questions</p>
-              <p className="text-2xl font-bold">{stats.questions.total}</p>
+              <p className="text-2xl font-bold">{total}</p>
             </div>
             <HelpCircle className="h-8 w-8 text-primary/20" />
           </div>
@@ -241,7 +248,7 @@ function StatsCard({ stats }: { stats: AdvisoryStats | null }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Open Questions</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.questions.open}</p>
+              <p className="text-2xl font-bold text-blue-600">{open}</p>
             </div>
             <AlertCircle className="h-8 w-8 text-blue-600/20" />
           </div>
@@ -252,7 +259,7 @@ function StatsCard({ stats }: { stats: AdvisoryStats | null }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Resolved</p>
-              <p className="text-2xl font-bold text-green-600">{stats.questions.resolved}</p>
+              <p className="text-2xl font-bold text-green-600">{resolved}</p>
             </div>
             <CheckCircle className="h-8 w-8 text-green-600/20" />
           </div>
@@ -263,9 +270,19 @@ function StatsCard({ stats }: { stats: AdvisoryStats | null }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Resolution Rate</p>
-              <p className="text-2xl font-bold">{stats.questions.resolutionRate}%</p>
+              <p className="text-2xl font-bold">{resolutionRate}%</p>
             </div>
-            <TrendingUp className="h-8 w-8 text-primary/20" />
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-8 w-8 text-primary/20" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRefresh}
+                className="h-6 w-6 p-0"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -277,11 +294,19 @@ function CategoryFilter({
   categories,
   selectedCategory,
   onSelect,
+  categoryStats,
 }: {
   categories: Category[]
   selectedCategory: string
   onSelect: (category: string) => void
+  categoryStats: Array<{ id: string; count: number }>
 }) {
+  // Merge categories with live stats
+  const categoriesWithCounts = categories.map(cat => ({
+    ...cat,
+    questionCount: categoryStats.find(stat => stat.id === cat.id)?.count || cat.questionCount
+  }))
+
   return (
     <ScrollArea className="w-full">
       <div className="flex gap-2 pb-2">
@@ -292,8 +317,11 @@ function CategoryFilter({
           className="shrink-0"
         >
           All Categories
+          <Badge variant="secondary" className="ml-1 text-xs">
+            {categoriesWithCounts.reduce((sum, cat) => sum + cat.questionCount, 0)}
+          </Badge>
         </Button>
-        {categories.map((category) => {
+        {categoriesWithCounts.map((category) => {
           const Icon = categoryIcons[category.id] || HelpCircle
           return (
             <Button
@@ -331,6 +359,17 @@ export default function QuestionsPage() {
   const [stats, setStats] = useState<AdvisoryStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [filterStats, setFilterStats] = useState<{
+    categories: Array<{ id: string; count: number }>
+    statuses: Array<{ id: string; count: number }>
+    urgencies: Array<{ id: string; count: number }>
+    cropTypes: Array<{ id: string; count: number }>
+  }>({
+    categories: [],
+    statuses: [],
+    urgencies: [],
+    cropTypes: []
+  })
 
   // Filters
   const [search, setSearch] = useState(searchParams.get("search") || "")
@@ -342,6 +381,30 @@ export default function QuestionsPage() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
 
+  const refreshStats = async () => {
+    try {
+      const statsRes = await statsApi.getStats()
+      console.log("Refresh stats response:", statsRes)
+      
+      // Extract data from API response structure
+      const statsData = statsRes.data || statsRes
+      console.log("Refresh stats data extracted:", statsData)
+      
+      setStats(statsData)
+      
+      if (statsData) {
+        setFilterStats({
+          categories: statsData.categories || [],
+          statuses: statsData.statuses || [],
+          urgencies: statsData.urgencies || [],
+          cropTypes: statsData.cropTypes || []
+        })
+      }
+    } catch (error) {
+      console.log("Error refreshing stats:", error)
+    }
+  }
+
   // Fetch categories and stats
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -352,13 +415,42 @@ export default function QuestionsPage() {
           questionApi.getTrending(5),
         ])
         setCategories(categoriesRes.categories)
-        setStats(statsRes)
-        setTrendingQuestions(trendingRes.questions)
+        
+        // Debug: Log actual stats response
+        console.log("Stats response:", statsRes)
+        
+        // Extract data from API response structure
+        const statsData = statsRes.data || statsRes
+        console.log("Stats data extracted:", statsData)
+        
+        setStats(statsData)
+        
+        // Extract filter statistics from stats response
+        if (statsData) {
+          console.log("Filter stats:", {
+            categories: statsData.categories || [],
+            statuses: statsData.statuses || [],
+            urgencies: statsData.urgencies || [],
+            cropTypes: statsData.cropTypes || []
+          })
+          setFilterStats({
+            categories: statsData.categories || [],
+            statuses: statsData.statuses || [],
+            urgencies: statsData.urgencies || [],
+            cropTypes: statsData.cropTypes || []
+          })
+        }
+        
+        setTrendingQuestions(trendingRes.data || [])
       } catch (error) {
         console.log("Error fetching initial data:", error)
       }
     }
     fetchInitialData()
+
+    // Auto-refresh stats every 30 seconds
+    const interval = setInterval(refreshStats, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Fetch questions
@@ -378,8 +470,8 @@ export default function QuestionsPage() {
         if (cropType) params.cropType = cropType
 
         const response = await questionApi.getAll(params)
-        setQuestions(response.questions)
-        setHasMore(response.pagination.hasNext || false)
+        setQuestions(response.data || [])
+        setHasMore(response.pagination && response.pagination.currentPage < response.pagination.pages)
         setPage(1)
       } catch (error) {
         console.log("Error fetching questions:", error)
@@ -406,8 +498,8 @@ export default function QuestionsPage() {
       if (cropType) params.cropType = cropType
 
       const response = await questionApi.getAll(params)
-      setQuestions((prev) => [...prev, ...response.questions])
-      setHasMore(response.pagination.hasNext || false)
+      setQuestions((prev) => [...prev, ...(response.data || [])])
+      setHasMore(response.pagination && response.pagination.currentPage < response.pagination.pages)
       setPage((prev) => prev + 1)
     } catch (error) {
       console.log("Error loading more questions:", error)
@@ -432,13 +524,28 @@ export default function QuestionsPage() {
 
   const hasActiveFilters = search || category || status || urgency || cropType
 
+  // Helper function to get count for filter options
+  const getFilterCount = (filterType: string, value: string) => {
+    const statsKey = `${filterType}s` as keyof typeof filterStats
+    const stats = filterStats[statsKey]
+    if (!stats || !Array.isArray(stats)) return 0
+    const stat = stats.find((s: any) => s.id === value)
+    return stat ? stat.count : 0
+  }
+
   return (
     <Suspense fallback={<Loading />}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Crop Advisory Questions</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Crop Advisory Questions</h1>
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-muted-foreground">Live</span>
+              </div>
+            </div>
             <p className="text-muted-foreground">
               Get expert advice on farming, crops, and agriculture
             </p>
@@ -452,13 +559,14 @@ export default function QuestionsPage() {
         </div>
 
         {/* Stats */}
-        <StatsCard stats={stats} />
+        <StatsCard stats={stats} onRefresh={refreshStats} />
 
         {/* Category Filter */}
         <CategoryFilter
           categories={categories}
           selectedCategory={category}
           onSelect={setCategory}
+          categoryStats={filterStats.categories}
         />
 
         <div className="grid lg:grid-cols-4 gap-6">
@@ -486,11 +594,11 @@ export default function QuestionsPage() {
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="answered">Answered</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
+                    <SelectItem value="all">All Status ({stats?.questions?.total || 0})</SelectItem>
+                    <SelectItem value="open">Open ({getFilterCount('status', 'open')})</SelectItem>
+                    <SelectItem value="answered">Answered ({getFilterCount('status', 'answered')})</SelectItem>
+                    <SelectItem value="resolved">Resolved ({getFilterCount('status', 'resolved')})</SelectItem>
+                    <SelectItem value="closed">Closed ({getFilterCount('status', 'closed')})</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select
@@ -501,11 +609,11 @@ export default function QuestionsPage() {
                     <SelectValue placeholder="Urgency" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Urgency</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="all">All Urgency ({stats?.questions?.total || 0})</SelectItem>
+                    <SelectItem value="critical">Critical ({getFilterCount('urgency', 'critical')})</SelectItem>
+                    <SelectItem value="high">High ({getFilterCount('urgency', 'high')})</SelectItem>
+                    <SelectItem value="medium">Medium ({getFilterCount('urgency', 'medium')})</SelectItem>
+                    <SelectItem value="low">Low ({getFilterCount('urgency', 'low')})</SelectItem>
                   </SelectContent>
                 </Select>
                 <Sheet>
@@ -532,10 +640,10 @@ export default function QuestionsPage() {
                             <SelectValue placeholder="Select crop type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">All Crops</SelectItem>
+                            <SelectItem value="all">All Crops ({stats?.questions?.total || 0})</SelectItem>
                             {CROP_TYPES.map((crop) => (
                               <SelectItem key={crop} value={crop}>
-                                {crop}
+                                {crop} ({getFilterCount('cropType', crop)})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -705,7 +813,7 @@ export default function QuestionsPage() {
                 <Button variant="ghost" className="w-full justify-start" asChild>
                   <Link href="/dashboard/questions?status=open">
                     <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />
-                    Open Questions
+                    Open Questions ({getFilterCount('status', 'open')})
                   </Link>
                 </Button>
                 {user?.role === "expert" && (
@@ -741,6 +849,7 @@ export default function QuestionsPage() {
               <CardContent className="space-y-2">
                 {categories.slice(0, 6).map((cat) => {
                   const Icon = categoryIcons[cat.id] || HelpCircle
+                  const liveCount = filterStats.categories.find(stat => stat.id === cat.id)?.count || cat.questionCount
                   return (
                     <button
                       key={cat.id}
@@ -757,7 +866,7 @@ export default function QuestionsPage() {
                         {cat.name}
                       </span>
                       <Badge variant="secondary" className="text-xs">
-                        {cat.questionCount}
+                        {liveCount}
                       </Badge>
                     </button>
                   )

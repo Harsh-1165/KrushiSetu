@@ -13,7 +13,7 @@ interface TocItem {
 }
 
 interface TableOfContentsProps {
-  contentRef: React.RefObject<HTMLDivElement>
+  contentRef: React.RefObject<HTMLDivElement | null>
 }
 
 export function TableOfContents({ contentRef }: TableOfContentsProps) {

@@ -35,7 +35,7 @@ export function ArticleCard({
       <Link href={`/knowledge-hub/article/${article.slug}`} className="group block">
         <div className="flex gap-4">
           {article.coverImage?.url && (
-            <div className="relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg">
+            <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg">
               <Image
                 src={article.coverImage.url || "/placeholder.svg"}
                 alt={article.coverImage.alt || article.title}
@@ -64,7 +64,7 @@ export function ArticleCard({
   if (variant === "featured") {
     return (
       <Card className="group overflow-hidden border-0 shadow-lg h-full relative">
-        <div className="relative h-full w-full min-h-[300px] md:min-h-[400px]">
+        <div className="relative h-full w-full min-h-75 md:min-h-96">
           {article.coverImage?.url ? (
             <Image
               src={article.coverImage.url || "/placeholder.svg"}
@@ -73,10 +73,10 @@ export function ArticleCard({
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5" />
+            <div className="h-full w-full bg-linear-to-br from-primary/20 to-primary/5" />
           )}
           {/* Enhanced Gradient for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent opacity-90" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/60 to-transparent opacity-90" />
 
           <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 text-white z-10">
             <div className="flex items-center gap-2 mb-3">
@@ -129,7 +129,7 @@ export function ArticleCard({
 
   return (
     <Card className="group h-full overflow-hidden transition-shadow hover:shadow-lg">
-      <div className="relative aspect-[16/10] overflow-hidden">
+      <div className="relative aspect-video overflow-hidden">
         {article.coverImage?.url ? (
           <Image
             src={article.coverImage.url || "/placeholder.svg"}
@@ -138,7 +138,7 @@ export function ArticleCard({
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+          <div className="h-full w-full bg-linear-to-br from-primary/20 to-primary/5 flex items-center justify-center">
             <span className="text-4xl text-primary/30">📚</span>
           </div>
         )}

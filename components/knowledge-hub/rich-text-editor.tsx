@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import {
   Bold,
   Italic,
@@ -23,6 +23,7 @@ import {
   Undo,
   Redo,
   Minus,
+  ArrowUp,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -92,6 +93,9 @@ export function RichTextEditor({
   const [linkUrl, setLinkUrl] = useState("")
   const [imageUrl, setImageUrl] = useState("")
   const [imageAlt, setImageAlt] = useState("")
+  const [showScrollButton, setShowScrollButton] = useState(false)
+  const editorRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const execCommand = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value)
@@ -127,10 +131,28 @@ export function RichTextEditor({
     onChange(content)
   }
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget
+    setShowScrollButton(target.scrollTop > 300)
+  }
+
+  const scrollToTop = () => {
+    if (editorRef.current) {
+      editorRef.current.scrollTop = 0
+    }
+  }
+
+  // Initialize editor with value
+  useEffect(() => {
+    if (editorRef.current && value && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value
+    }
+  }, [])
+
   return (
-    <div className={cn("border rounded-lg overflow-hidden", className)}>
+    <div ref={containerRef} className={cn("border rounded-lg overflow-hidden relative h-screen flex flex-col", className)}>
       {/* Toolbar */}
-      <div className="border-b bg-muted/30 p-2 flex flex-wrap items-center gap-0.5">
+      <div className="border-b bg-muted/30 p-2 flex flex-wrap items-center gap-0.5 sticky top-0 z-10 shrink-0">
         {/* History */}
         <ToolbarButton
           icon={<Undo className="h-4 w-4" />}
@@ -148,18 +170,18 @@ export function RichTextEditor({
         {/* Headings */}
         <ToolbarButton
           icon={<Heading1 className="h-4 w-4" />}
-          label="Heading 1"
-          onClick={() => handleFormat("h2")}
+          label="Heading 1 (H1)"
+          onClick={() => handleFormat("h1")}
         />
         <ToolbarButton
           icon={<Heading2 className="h-4 w-4" />}
-          label="Heading 2"
-          onClick={() => handleFormat("h3")}
+          label="Heading 2 (H2)"
+          onClick={() => handleFormat("h2")}
         />
         <ToolbarButton
           icon={<Heading3 className="h-4 w-4" />}
-          label="Heading 3"
-          onClick={() => handleFormat("h4")}
+          label="Heading 3 (H3)"
+          onClick={() => handleFormat("h3")}
         />
 
         <Separator orientation="vertical" className="h-6 mx-1" />
@@ -256,6 +278,7 @@ export function RichTextEditor({
                   placeholder="https://example.com"
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && insertLink()}
                 />
               </div>
               <Button onClick={insertLink} className="w-full" size="sm">
@@ -290,6 +313,7 @@ export function RichTextEditor({
                   placeholder="Image description"
                   value={imageAlt}
                   onChange={(e) => setImageAlt(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && insertImage()}
                 />
               </div>
               <Button onClick={insertImage} className="w-full" size="sm">
@@ -302,27 +326,46 @@ export function RichTextEditor({
 
       {/* Editor Content */}
       <div
+        ref={editorRef}
         contentEditable
         suppressContentEditableWarning
         className={cn(
-          "p-4 outline-none overflow-auto",
+          "p-6 outline-none overflow-y-auto flex-1 relative",
           "prose prose-sm dark:prose-invert max-w-none",
-          "prose-headings:font-bold",
+          "prose-headings:font-bold prose-headings:my-4",
+          "prose-h1:text-3xl prose-h1:mt-8 prose-h1:mb-4 prose-h1:border-b prose-h1:pb-2",
           "prose-h2:text-2xl prose-h2:mt-6 prose-h2:mb-3",
           "prose-h3:text-xl prose-h3:mt-5 prose-h3:mb-2",
           "prose-h4:text-lg prose-h4:mt-4 prose-h4:mb-2",
-          "prose-p:my-2",
-          "prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-1 prose-blockquote:px-4",
-          "prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded",
-          "prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-lg",
-          "[&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground"
+          "prose-p:my-3 prose-p:leading-relaxed",
+          "prose-ul:my-3 prose-ul:ml-6 prose-li:my-1",
+          "prose-ol:my-3 prose-ol:ml-6",
+          "prose-blockquote:border-l-4 prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:my-3 prose-blockquote:italic",
+          "prose-a:text-primary prose-a:break-words",
+          "prose-img:rounded-lg prose-img:my-4 prose-img:border",
+          "prose-code:bg-muted prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm",
+          "prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto prose-pre:my-4",
+          "prose-hr:my-6 prose-hr:border-border",
+          "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
         )}
-        style={{ minHeight }}
         onInput={handleInput}
         onPaste={handlePaste}
+        onScroll={handleScroll}
         data-placeholder={placeholder}
-        dangerouslySetInnerHTML={{ __html: value }}
       />
+
+      {/* Scroll to Top Button */}
+      {showScrollButton && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute bottom-4 right-4 h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition-all"
+          onClick={scrollToTop}
+          type="button"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   )
 }
